@@ -118,7 +118,7 @@ namespace SE_Hellfire
 
         void statusDisplay(string status)
         {
-
+            hf_Status.WritePublicText(status + "/n", true);
         }
 
         bool Diagnostics()
