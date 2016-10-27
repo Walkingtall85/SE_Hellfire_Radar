@@ -58,6 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SE_Hellfire_test.cs" />
     <Compile Include="SE_Hellfire.cs" />
   </ItemGroup>
   <ItemGroup>
