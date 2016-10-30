@@ -27,11 +27,15 @@ namespace SE_Hellfire
         IMyTextPanel hf_Status;
         IMySmallMissileLauncher hf_MisslileLauncher;
 
+        List<IMyTerminalBlock> hf_Launchers = new List<IMyTerminalBlock>();
+
         // Rotors
         IMyMotorAdvancedStator hf_BackupRotorSupport;
-        IMyMotorAdvancedStator hf_RotorSupport;
-        IMyMotorAdvancedStator hf_BackupRotorHinge;
+        IMyMotorAdvancedStator hf_rotorSupport;
+        IMyMotorAdvancedStator hf_ActiveRotorSupport;
         IMyMotorAdvancedStator hf_rotorHinge;
+        IMyMotorAdvancedStator hf_BackupRotorHinge;
+        IMyMotorAdvancedStator hf_ActiveRotorHinge;
 
         //strings
         string rotorStatusHinge = "functional";
@@ -39,13 +43,19 @@ namespace SE_Hellfire
         string targetStatus = "none";
         string hellfireStatus = "none";
 
+        string hf_help = "Arguments: close, open, angle\n status, lock, lockon, fire, help";
+
         //floats
         float angleHingeRotor;
         float angleSupportRotor;
         float angleSupportPiston;
-
+        
         //constants
         float hellfireLength = 30;
+        float deactivateAngle = 50;
+
+        //Lists  
+        List<IMyFunctionalBlock> hf_Systems = new List<IMyFunctionalBlock>();
 
         //Vectors
         Vector3D LastShipPos = new Vector3D(0.0, 0.0, 0.0);
@@ -57,18 +67,27 @@ namespace SE_Hellfire
 
         void Program()
         {
+            statusDisplay("Hellfire booting sequence", false);
+            statusDisplay("Checking components");
             hf_Scanner = GridTerminalSystem.GetBlockWithName("HF_scanner") as IMyCameraBlock;
             hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock;
             hf_Remote = GridTerminalSystem.GetBlockWithName("HF_remote") as IMyRemoteControl;
 
             hf_BackupRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_b") as IMyMotorAdvancedStator;
-            hf_RotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_a") as IMyMotorAdvancedStator;
+            hf_ActiveRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_a") as IMyMotorAdvancedStator;
+            hf_rotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_a") as IMyMotorAdvancedStator;
             hf_PistonSupport = GridTerminalSystem.GetBlockWithName("HF_supportPiston_a") as IMyPistonBase;
 
             hf_BackupRotorHinge = GridTerminalSystem.GetBlockWithName("HF_support_b") as IMyMotorAdvancedStator;
             hf_rotorHinge = GridTerminalSystem.GetBlockWithName("HF_support_a") as IMyMotorAdvancedStator;
+            hf_ActiveRotorHinge = GridTerminalSystem.GetBlockWithName("HF_support_a") as IMyMotorAdvancedStator;
 
             hf_Status = GridTerminalSystem.GetBlockWithName("HF_status") as IMyTextPanel;
+
+            hf_Systems.InsertRange(hf_Systems.Count, new List<IMyFunctionalBlock> { hf_ActiveRotorHinge, hf_ActiveRotorSupport, hf_PistonSupport });
+
+            statusDisplay("Checking weaponsystems");
+            GridTerminalSystem.GetBlocksOfType<IMySmallMissileLauncher>(hf_Launchers);      
 
             if (Diagnostics())
             {
@@ -79,8 +98,6 @@ namespace SE_Hellfire
 
             }
 
-            hf_MisslileLauncher.ApplyAction("shootOnce");
-
             statusDisplay(hellfireStatus);
         }
 
@@ -88,50 +105,142 @@ namespace SE_Hellfire
 
         void Main(string Argument)
         {
-            switch (Argument)
+            string[] arguments = Argument.Split(':');
+
+            switch (arguments[0])
             {
                 case "close":
 
                     break;
                 case "open":
                     //GridTerminalSystem. hf_rotorHinge.
-
-
+                    break;
+                case "angle":
+                    int angle = 0;
+                    if (int.TryParse(arguments[1], out angle))
+                    {
+                        setAngle(angle);
+                    }
+                    else
+                    {
+                        statusDisplay("Error: Illegal angle - " + arguments[1]);
+                    }
+                    break;
+                case "lock":
+                    lockSystem();
+                    break;
+                case "lockon":
+                    lockOn();
+                    break;
+                case "fire":
+                    fireHellfire();
+                    break;
+                case "status":
+                    Diagnostics();
+                    break;
+                case "help":
+                case "h":
+                    statusDisplay(hf_help);
                     break;
                 default:
                    
                     break;
             }
 
+        }
 
+        private void lockSystem()
+        {
+            throw new NotImplementedException();
+        }
 
+        private void lockOn()
+        {
+            throw new NotImplementedException();
+        }
 
-            var launchers = new List<IMyTerminalBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMySmallMissileLauncher>(launchers);
-
-            foreach (IMySmallMissileLauncher item in launchers)
+        private void setAngle(int angle)
+        {
+            if (angle > 90 || angle < -10)
             {
+                statusDisplay("Error: Illegal angle - " + angle);
+            }
+            else
+            {
+                if (hf_ActiveRotorHinge.Angle > angle)
+                {
+                    hf_ActiveRotorHinge.SetValueFloat("velocity", -1.0f);
+                }
+                else if (hf_ActiveRotorHinge.Velocity > 0)
+                {
 
+                }
+                else
+                {
+
+                }
             }
         }
 
+        void fireHellfire()
+        {
+            if (hf_ActiveRotorHinge.Angle >= deactivateAngle)
+            {
+                for (int i = 0; i < hf_Launchers.Count; i++)
+                {
+                    hf_Launchers[i].ApplyAction("shootOnce");
+                }
+            } else
+            {
+                statusDisplay("Warning: Hellfire system is not\n in shooting position");
+            }
+
+        }
 
         void statusDisplay(string status)
         {
-            hf_Status.WritePublicText(status + "/n", true);
+            statusDisplay(status, true);
+        }
+
+        void statusDisplay(string status, bool append)
+        {
+            hf_Status.WritePublicText(status + "/n", append);
         }
 
         bool Diagnostics()
         {
+            bool status = true;
 
-            return true;
+            statusDisplay("Running diagnostics");
+
+            for(int i = 0; i < hf_Systems.Count; i++)
+            {
+                if (hf_Systems[i] != null)
+                {
+                    if (hf_Systems[i].IsWorking)
+                    {
+                        statusDisplay(hf_Systems[i].DisplayNameText + " - online");
+                    }
+                    else
+                    {
+                        statusDisplay(hf_Systems[i].DisplayNameText + " - offline");
+                        status = false;
+                    }
+                } else
+                {
+                    statusDisplay(hf_Systems[i].DisplayNameText + " - cannot be found");
+                    status = false;
+                }
+            } 
+
+            return status;
         }
 
 
 
         void checkRotorSupport()
         {
-            if (!hf_RotorSupport.IsWorking || !hf_RotorSupport.IsAttached)
+            if (!hf_ActiveRotorSupport.IsWorking || !hf_ActiveRotorSupport.IsAttached)
             {
                 if (!hf_BackupRotorSupport.IsWorking || !hf_BackupRotorSupport.IsAttached)
                 {
@@ -146,7 +255,7 @@ namespace SE_Hellfire
             {
                 if (!rotorStatusSupport.Equals("Functional"))
                 {
-                    if(!hf_RotorSupport.IsAttached)
+                    if(!hf_ActiveRotorSupport.IsAttached)
                     {
                         if(hf_BackupRotorSupport.IsFunctional && hf_BackupRotorSupport.IsAttached)
                         {
@@ -161,7 +270,7 @@ namespace SE_Hellfire
         void checkRotorHinge()
         {
 
-            if (!hf_rotorHinge.IsWorking || !hf_rotorHinge.IsAttached)
+            if (!hf_ActiveRotorHinge.IsWorking || !hf_ActiveRotorHinge.IsAttached)
             {
                 if (!hf_BackupRotorSupport.IsWorking || !hf_BackupRotorSupport.IsAttached)
                 {

@@ -9,6 +9,7 @@ using Sandbox.Game;
 using Sandbox.Engine;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
+using Sandbox.Game.Weapons;
 using Sandbox.ModAPI.Weapons;
 using Sandbox.Common.ObjectBuilders;
 using VRageMath;
@@ -19,7 +20,9 @@ namespace SE_Hellfire
     public class HellFire_test
     {
         IMyGridTerminalSystem GridTerminalSystem;
-
+        /// <summary>
+        /// START COPYING HERE
+        /// </summary>
 
         IMyProgrammableBlock thisBlock;
         IMyCameraBlock hf_Scanner;
@@ -28,21 +31,26 @@ namespace SE_Hellfire
         IMyLaserAntenna hf_Laser;
         IMyRemoteControl hf_Remote;
         IMyTextPanel hf_Status;
-        //IMyTimerBlock hf_timer; 
+        //IMyTimerBlock hf_timer;  
         IMyFunctionalBlock hf_;
+        IMyLargeTurretBase hf_TurretA;
+        IMyLargeTurretBase hf_TurretB;
 
-        //Lists 
+        //Lists  
         List<IMyFunctionalBlock> systems = new List<IMyFunctionalBlock>();
 
-        //strings 
+        //strings  
         string targetStatus = "none";
         string hellfireStatus = "none";
-        string helpString = "Commands:\n antenna, camera, laser,\n sensor, azimut, status,\n clear, help";
+        string helpString = "Commands:\n antenna, camera, laser,\n sensor, azimut, status,\n turret, clear, help";
+        string azimuthA = "0";
+        string azimuthB = "0";
 
-        //constants 
+
+        //constants  
         float hellfireLength = 30;
 
-        //Vectors 
+        //Vectors  
         Vector3D LastShipPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D LastTargetPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D targetPosition = new Vector3D(0.0, 0.0, 0.0);
@@ -60,9 +68,13 @@ namespace SE_Hellfire
             hf_Status = GridTerminalSystem.GetBlockWithName("HF_status") as IMyTextPanel;
             thisBlock = GridTerminalSystem.GetBlockWithName("HF_Programmable") as IMyProgrammableBlock;
 
-            systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_Antenna, hf_Laser,
-hf_Scanner, hf_Sensor, hf_Status});
+            hf_TurretA = GridTerminalSystem.GetBlockWithName("HF_TurretA") as IMyLargeTurretBase;
+            hf_TurretB = GridTerminalSystem.GetBlockWithName("HF_TurretB") as IMyLargeTurretBase;
 
+            systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_Antenna, hf_Laser,
+hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
+
+            statusDisplay("Hellfire Sustem: starting", false);
             getStatus();
         }
 
@@ -88,6 +100,9 @@ hf_Scanner, hf_Sensor, hf_Status});
                 case "status":
                     getStatus();
                     break;
+                case "turret":
+                    getTurret();
+                    break;
                 case "cls":
                 case "clear":
                     statusDisplay("cls...", false);
@@ -99,6 +114,32 @@ hf_Scanner, hf_Sensor, hf_Status});
                     statusDisplay(helpString);
                     break;
             }
+        }
+
+        private void getTurret()
+        {
+            lock (hf_TurretA)
+            {
+                if (!azimuthA.Equals(hf_TurretA.Azimuth.ToString()))
+                {
+                    statusDisplay("+++" + " TURRET A " + "+++");
+                    azimuthA = hf_TurretA.Azimuth.ToString();
+                    statusDisplay(azimuthA);
+                    statusDisplay(hf_TurretA.DetailedInfo);
+                }
+            }
+
+            lock (hf_TurretB)
+            {
+                if (!azimuthB.Equals(hf_TurretB.Azimuth.ToString()))
+                {
+                    statusDisplay("+++" + " TURRET B " + "+++");
+                    azimuthB = hf_TurretB.Azimuth.ToString();
+                    statusDisplay(azimuthB);
+                    statusDisplay(hf_TurretB.DetailedInfo);
+                }
+            }
+
         }
 
         private void getAzimut()
@@ -123,21 +164,21 @@ hf_Scanner, hf_Sensor, hf_Status});
         {
             statusDisplay("+++" + hf_Laser.CustomInfo);
             statusDisplay(hf_Laser.DetailedInfo);
-            //statusDisplay(hf_Laser.); 
+            //statusDisplay(hf_Laser.);  
         }
 
         private void getCamera()
         {
             statusDisplay("+++" + hf_Scanner.CustomInfo + "+++");
             statusDisplay(hf_Scanner.DetailedInfo);
-            //statusDisplay(hf_Scanner.); 
+            //statusDisplay(hf_Scanner.);  
         }
 
         private void getAntenna()
         {
             statusDisplay("+++" + hf_Antenna.CustomInfo + "+++");
             statusDisplay(hf_Antenna.DetailedInfo);
-            //statusDisplay(hf_Antenna.); 
+            //statusDisplay(hf_Antenna.);  
         }
 
         void statusDisplay(string status)
@@ -146,7 +187,7 @@ hf_Scanner, hf_Sensor, hf_Status});
         }
         void statusDisplay(string status, bool append)
         {
-            hf_Status.WritePublicText(status + "\n", append);
+            hf_Status.WritePrivateText(status + "\n", append);
         }
 
         void getStatus()
@@ -208,12 +249,13 @@ hf_Scanner, hf_Sensor, hf_Status});
             {
                 targetStatus = "engaged";
                 double radian = (Math.Atan2(targetDistance, hellfireLength));
-                angle = (float) (radian * (180 / Math.PI));
-            } else
+                angle = (float)(radian * (180 / Math.PI));
+            }
+            else
             {
                 targetStatus = "searching";
-            } 
-            
+            }
+
             return angle;
         }
 
@@ -226,13 +268,13 @@ hf_Scanner, hf_Sensor, hf_Status});
 
         Vector3D GetTargetPosition()
         {
-            Vector3D position = new Vector3D(0,0,0);
+            Vector3D position = new Vector3D(0, 0, 0);
             if (hf_Sensor.IsActive)
             {
                 if (hf_Sensor.LastDetectedEntity != null && hf_Sensor.LastDetectedEntity != target)
-                { 
+                {
                     target = hf_Sensor.LastDetectedEntity;
-                    LastTargetPos = target.GetPosition(); //reset last pos to fix vel later
+                    LastTargetPos = target.GetPosition(); //reset last pos to fix vel later 
                 }
             }
             if (target != null)
@@ -240,18 +282,20 @@ hf_Scanner, hf_Sensor, hf_Status});
                 position = target.GetPosition();
                 LastTargetPos = position;
             }
-            return position; //just aim ahead if nothing found yet
+            return position; //just aim ahead if nothing found yet 
         }
 
 
         float GetTargetDistance()
         {
             float distance = 150;
-            if(target != null)
+            if (target != null)
 
-            distance = (float)Math.Sqrt(LastShipPos.X * LastTargetPos.X + LastShipPos.Y * LastTargetPos.Y + LastShipPos.Z * LastTargetPos.Z);
-        return distance;
+                distance = (float)Math.Sqrt(LastShipPos.X * LastTargetPos.X + LastShipPos.Y * LastTargetPos.Y + LastShipPos.Z * LastTargetPos.Z);
+            return distance;
         }
+
+        // STOP COMPY
 
     }
 }
