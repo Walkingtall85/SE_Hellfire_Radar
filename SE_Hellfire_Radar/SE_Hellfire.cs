@@ -77,11 +77,11 @@ namespace SE_Hellfire
         int launcherDisabled = 0;
 
         //constants  
-        float hellfireLength = (float)(18 * 2.5);
-        float safetyeAngle = -50;
-        float hellfireVelocity = -2.25f;
-        float open = -90;
-        float closed = 8;
+        const double hellfireLength = 45;
+        const double safetyeAngle = 50;
+        const float hellfireVelocity = 2.25f;
+        const float open = 90;
+        const float closed = -8;
 
         //boool  
         bool safety = true;
@@ -262,14 +262,25 @@ namespace SE_Hellfire
 
         public void setAngle(float angle)
         {
-            if (angle > open || angle < closed)
+
+            if (angle <= open && angle >= closed)
             {
-                LogDisplay("Error: Illegal angle - " + angle);
+                DisplayDebug("Seting Angle to " + angle);
+                angle = DegreeToRadian(angle);
+                if (hf_ActiveRotorHinge.DisplayNameText.Equals("HF_rotor_a") && hf_ActiveRotorHinge.Angle < angle)
+                {
+
+                } 
             }
             else
             {
-                HellFireAngle(angle);
+                LogDisplay("Error: Illegal angle - " + angle);
             }
+        }
+
+        private void DisplayDebug(string v)
+        {
+            
         }
 
         public void getAngle()
