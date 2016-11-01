@@ -19,9 +19,15 @@ namespace SE_Hellfire
     public class HellFire
     {
         IMyGridTerminalSystem GridTerminalSystem;
+
+        internal interface IMyTimerBlock : IMyFunctionalBlock
+        {
+        }
         /// <summary>
         /// Start Coping here
         /// </summary>
+        #region copy
+
 
         IMyCameraBlock hf_Camera;
         IMySensorBlock hf_Sensor;
@@ -30,12 +36,16 @@ namespace SE_Hellfire
         IMyPistonBase hf_PistonSupport;
         IMySmallMissileLauncher hf_MisslileLauncher;
 
+        IMyTimerBlock hf_statusTimer;
+        IMyTimerBlock hf_velocityTimer;
+
+
         IMyTextPanel hf_DisplayLog;
         IMyTextPanel hf_DisplayStatus;
 
         List<IMyTerminalBlock> hf_Launchers = new List<IMyTerminalBlock>();
 
-        // Rotors 
+        // Rotors  
         IMyMotorAdvancedStator hf_BackupRotorSupport;
         IMyMotorAdvancedStator hf_RotorSupport;
         IMyMotorAdvancedStator hf_ActiveRotorSupport;
@@ -43,41 +53,43 @@ namespace SE_Hellfire
         IMyMotorAdvancedStator hf_BackupRotorHinge;
         IMyMotorAdvancedStator hf_ActiveRotorHinge;
 
-        //strings 
+        //strings  
         string rotorStatusHinge = "functional";
         string rotorStatusSupport = "functional";
         string targetStatus = "none";
         string hellfireStatus = "none";
+        string hingeStatus = "none";
         string weaponStatus = "none";
         string weaponCount = "none";
         string weaponEnabled = "none";
 
         string hf_help = "Arguments: close, open, angle\n status, lock, lockon, fire, help";
 
-        //floats 
+        //floats  
         float angleHingeRotor;
         float angleSupportRotor;
         float angleSupportPiston;
+        float angleDifference;
 
         int launcherCount = 0;
         int launcherTotal = 0;
         int launcherEnabled = 0;
         int launcherDisabled = 0;
 
-        //constants 
+        //constants  
         float hellfireLength = (float)(18 * 2.5);
         float safetyeAngle = -50;
         float hellfireVelocity = -2.25f;
         float open = -90;
         float closed = 8;
 
-        //boool 
+        //boool  
         bool safety = true;
 
-        //Lists   
+        //Lists    
         List<IMyFunctionalBlock> hf_Systems = new List<IMyFunctionalBlock>();
 
-        //Vectors 
+        //Vectors  
         Vector3D LastShipPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D LastTargetPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D targetPosition = new Vector3D(0.0, 0.0, 0.0);
@@ -93,9 +105,9 @@ namespace SE_Hellfire
             LogDisplay("Hellfire booting sequence", false);
             LogDisplay("Checking components");
 
-            //hf_Camera = GridTerminalSystem.GetBlockWithName("HF_camera") as IMyCameraBlock; 
-            //hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock; 
-            //hf_Remote = GridTerminalSystem.GetBlockWithName("HF_remote") as IMyRemoteControl; 
+            //hf_Camera = GridTerminalSystem.GetBlockWithName("HF_camera") as IMyCameraBlock;  
+            //hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock;  
+            //hf_Remote = GridTerminalSystem.GetBlockWithName("HF_remote") as IMyRemoteControl;  
 
             hf_BackupRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_b") as IMyMotorAdvancedStator;
             hf_ActiveRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_a") as IMyMotorAdvancedStator;
@@ -106,12 +118,15 @@ namespace SE_Hellfire
             hf_RotorHinge = GridTerminalSystem.GetBlockWithName("HF_rotor_a") as IMyMotorAdvancedStator;
             hf_ActiveRotorHinge = GridTerminalSystem.GetBlockWithName("HF_rotor_a") as IMyMotorAdvancedStator;
 
-            hf_Systems.InsertRange(hf_Systems.Count, new List<IMyFunctionalBlock> { hf_ActiveRotorHinge, hf_ActiveRotorSupport, hf_PistonSupport });
+            hf_statusTimer = GridTerminalSystem.GetBlockWithName("HF_status_Timer") as IMyTimerBlock;
+            hf_velocityTimer = GridTerminalSystem.GetBlockWithName("HF_velocity_Timer") as IMyTimerBlock;
+
+            hf_Systems.InsertRange(hf_Systems.Count, new List<IMyFunctionalBlock> { hf_ActiveRotorHinge, hf_ActiveRotorSupport, hf_PistonSupport, hf_statusTimer, hf_velocityTimer });
 
             LogDisplay("Checking weaponsystems");
             GridTerminalSystem.GetBlocksOfType<IMySmallMissileLauncher>(hf_Launchers);
 
-            // Delete this once the real total is known 
+            // Delete this once the real total is known  
             launcherTotal = hf_Launchers.Count;
 
             if (Diagnostics())
@@ -154,6 +169,9 @@ namespace SE_Hellfire
                         LogDisplay("Error: Illegal angle - " + arguments[1]);
                     }
                     break;
+                case "velocity":
+                    AdjustVelocity();
+                    break;
                 case "unlock":
                     LockSystem(false);
                     break;
@@ -169,12 +187,18 @@ namespace SE_Hellfire
                 case "status":
                     Diagnostics();
                     break;
+                case "update":
+                    RefreshStatus();
+                    break;
                 case "cls":
                     LogDisplay("cls...", false);
                     break;
                 case "help":
                 case "h":
                     LogDisplay(hf_help);
+                    break;
+                case "getAngle":
+                    getAngle();
                     break;
                 default:
 
@@ -189,7 +213,7 @@ namespace SE_Hellfire
             LogDisplay("Checking Current position");
             if (hf_ActiveRotorHinge.Angle < closed && hf_ActiveRotorHinge.Angle > open)
             {
-
+                hingeStatus = "opening";
                 LogDisplay("Adjusting opening position");
                 hf_ActiveRotorHinge.SetValueFloat("LowerLimit", open);
 
@@ -197,7 +221,7 @@ namespace SE_Hellfire
                 hf_ActiveRotorHinge.SetValueFloat("Velocity", hellfireVelocity);
 
                 LogDisplay("Opening in Progress");
-                adjustVelocity(open);
+                AdjustVelocity();
 
             }
             else
@@ -211,7 +235,7 @@ namespace SE_Hellfire
             if (hf_ActiveRotorHinge.Angle > closed)
             {
                 hf_ActiveRotorHinge.SetValueFloat("velocity", -hellfireVelocity);
-                adjustVelocity(closed);
+                //adjustVelocity(closed); 
             }
             else
             {
@@ -248,20 +272,27 @@ namespace SE_Hellfire
             }
         }
 
+        public void getAngle()
+        {
+            LogDisplay(hf_ActiveRotorHinge.Angle.ToString());
+        }
+
         public void HellFireAngle(float angle)
         {
-            LogDisplay("Changeing angle from " + hf_ActiveRotorHinge.Angle + " to " + angle);
+            LogDisplay("Changeing angle from " + RadianToDegree(hf_ActiveRotorHinge.Angle) + " to " + angle);
+            angle = DegreeToRadian(angle);
+
             if (hf_ActiveRotorHinge.Angle < angle)
             {
                 hf_ActiveRotorHinge.SetValueFloat("MaxLimit", angle);
                 hf_ActiveRotorHinge.SetValueFloat("Velocity", hellfireVelocity);
-                adjustVelocity(angle);
+                hf_velocityTimer.ApplyAction("TriggerNow");
             }
             else if (hf_ActiveRotorHinge.Angle > angle)
             {
                 hf_ActiveRotorHinge.SetValueFloat("MinLimit", angle);
                 hf_ActiveRotorHinge.SetValueFloat("Velocity", -hellfireVelocity);
-                adjustVelocity(angle);
+                hf_velocityTimer.ApplyAction("TriggerNow");
             }
             else
             {
@@ -269,48 +300,32 @@ namespace SE_Hellfire
             }
         }
 
-        public void adjustVelocity(float angle)
+        public void AdjustVelocity()
         {
             float difference;
-            if (hf_ActiveRotorHinge.Angle > angle)
+            if (hingeStatus.Equals("closing") && hf_ActiveRotorHinge.Angle < hf_ActiveRotorHinge.GetValueFloat("UpperLimit"))
             {
-                while (hf_ActiveRotorHinge.Angle > angle)
+                difference = hf_ActiveRotorHinge.GetValueFloat("UpperLimit") - hf_ActiveRotorHinge.Angle;
+                angleDifference = RadianToDegree(difference);
+                if (difference < 0.05 && hf_ActiveRotorHinge.Velocity > (hellfireVelocity / 2))
                 {
-                    difference = hf_ActiveRotorHinge.Angle - angle;
-                    RefreshStatus();
-                    if (difference < 3 && hf_ActiveRotorHinge.Velocity > (hellfireVelocity / 2))
-                    {
-                        LogDisplay("Adjusting speed...");
-                        hf_ActiveRotorHinge.SetValueFloat("Velocity", hellfireVelocity / 2);
-                    }
-                    else if (difference <= 0)
-                    {
-                        LogDisplay("Endposition reached");
-                        LockSystem(true);
-                        break;
-                    }
+                    hf_ActiveRotorHinge.SetValueFloat("Velocity", (hellfireVelocity / 2));
                 }
 
             }
+            else if ((hingeStatus.Equals("opening") && hf_ActiveRotorHinge.Angle > hf_ActiveRotorHinge.GetValueFloat("LowerLimit")))
+            {
+                difference = hf_ActiveRotorHinge.GetValueFloat("LowerLimit") - hf_ActiveRotorHinge.Angle;
+                angleDifference = RadianToDegree(difference);
+                if (difference < 0.05 && hf_ActiveRotorHinge.Velocity > (hellfireVelocity / 2))
+                {
+                    hf_ActiveRotorHinge.SetValueFloat("Velocity", (hellfireVelocity / 2));
+                }
+            }
             else
             {
-                while (hf_ActiveRotorHinge.Angle < angle)
-                {
-                    difference = angle - hf_ActiveRotorHinge.Angle;
-                    RefreshStatus();
-                    if (difference < 3 && hf_ActiveRotorHinge.Velocity < (hellfireVelocity / 2))
-                    {
-                        LogDisplay("Adjusting speed...");
-                        hf_ActiveRotorHinge.SetValueFloat("Velocity", hellfireVelocity / 2);
-                        break;
-                    }
-                    else if (difference <= 0)
-                    {
-                        LogDisplay("Endposition reached");
-                        LockSystem(true);
-                        break;
-                    }
-                }
+                hf_velocityTimer.ApplyAction("Stop");
+                LogDisplay("Stopping Hinge " + hingeStatus + " - " + RadianToDegree(hf_ActiveRotorHinge.Angle));
             }
         }
 
@@ -320,7 +335,7 @@ namespace SE_Hellfire
             int count = 0;
             int enabled = 0;
             int disabled = 0;
-            //LogDisplay("Checking Weaponsystems");
+            //LogDisplay("Checking Weaponsystems"); 
             for (int i = 0; i < hf_Launchers.Count; i++)
             {
                 if (hf_Launchers[i].IsFunctional)
@@ -345,7 +360,7 @@ namespace SE_Hellfire
             if (!status)
             {
                 LogDisplay("All weapon systems - online");
-            } 
+            }
 
             weaponEnabled = (enabled + "/" + disabled);
             weaponCount = (count + "/" + launcherTotal);
@@ -415,8 +430,9 @@ namespace SE_Hellfire
             hf_DisplayStatus.WritePrivateText("Weapons:" + weaponStatus + "\n", true);
             hf_DisplayStatus.WritePrivateText("Count/Total:" + weaponCount + "\n", true);
             hf_DisplayStatus.WritePrivateText("Enabled/Disabled:" + weaponEnabled + "\n", true);
-            hf_DisplayStatus.WritePrivateText("Angle:" + hf_ActiveRotorHinge.LowerLimit + "/" + hf_ActiveRotorHinge.Angle + "/" + hf_ActiveRotorHinge.UpperLimit + "\n", true);
-            // add additional blocks for target ID etc 
+            hf_DisplayStatus.WritePrivateText("Angle:" + RadianToDegree(hf_ActiveRotorHinge.LowerLimit) + "/" + RadianToDegree(hf_ActiveRotorHinge.Angle) + "/" + RadianToDegree(hf_ActiveRotorHinge.UpperLimit) + "\n", true);
+            hf_DisplayStatus.WritePrivateText("Difference: " + hingeStatus + " - " + angleDifference, true);
+            // add additional blocks for target ID etc  
         }
 
 
@@ -555,7 +571,7 @@ namespace SE_Hellfire
                 if (hf_Sensor.LastDetectedEntity != null && hf_Sensor.LastDetectedEntity != target)
                 {
                     target = hf_Sensor.LastDetectedEntity;
-                    LastTargetPos = target.GetPosition(); //reset last pos to fix vel later 
+                    LastTargetPos = target.GetPosition(); //reset last pos to fix vel later  
                 }
             }
             if (target != null)
@@ -563,7 +579,7 @@ namespace SE_Hellfire
                 position = target.GetPosition();
                 LastTargetPos = position;
             }
-            return position; //just aim ahead if nothing found yet 
+            return position; //just aim ahead if nothing found yet  
         }
 
 
@@ -577,6 +593,20 @@ namespace SE_Hellfire
             return distance;
         }
 
+
+        private float DegreeToRadian(float angle)
+        {
+            return (float)(Math.PI * angle / 180.0);
+        }
+
+        private float RadianToDegree(float angle)
+        {
+            return (float)(angle * (180.0 / Math.PI));
+        }
+
         //stop coping here
+        #endregion
     }
+
+
 }
