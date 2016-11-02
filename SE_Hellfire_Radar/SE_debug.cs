@@ -32,46 +32,50 @@ namespace SE_Hellfire_Radar
             "-prev  Goes to the previous page\n"
             );
 
-        //the logfile
+        //the logfile 
         List<string> log = new List<string>();
 
-        //int
+        //int 
         int linesOnScreen = 0;
-        int currentPageNumber = 1;
+        int pageNumber = 1;
         int currentTopLine = 0;
+        int lastPage = 1;
+        int test = 1;
 
-        //constants
+        //constants 
         const string debugScreenName = "debug";
         const char lineBreak = '\n';
-        const int lineBreakCount = 20;
-        const int linesPerPage = 10;
+        const int lineBreakCount = 35;
+        const int linesPerPage = 16;
         const int maximumPages = 50;
 
         void Program()
         {
-            debugScreen = GridTerminalSystem.GetBlockWithName(debugScreenName) as IMyTextPanel;
+            debugScreen = GridTerminalSystem.GetBlockWithName("debug") as IMyTextPanel;
 
             if (debugScreen != null)
             {
-                debugScreen.ShowPrivateTextOnScreen();
                 debugScreen.WritePrivateTitle("DEBUG");
 
-                string test = debugScreen.GetValueColor("FontColor") + " " + debugScreen.GetValueColor("BackGroundColor");
-                Echo(test);
+                //string test = debugScreen.GetValueColor("FontColor") + " " + debugScreen.GetValueColor("BackGroundColor"); 
+                //Echo(test); 
 
                 if (Storage != null)
                 {
-                    debugScreen.WritePrivateText("Restoring Logfile", true);
+                    Echo("Restoring Logfile");
                     LoadStorage();
                 }
-            } else
+            }
+            else
             {
                 Echo("Error: Debugscreen '" + debugScreenName + "' not found");
             }
+            UpdateScreen();
         }
 
-        void Save()
+        public void Save()
         {
+            // this does not work like this
             Storage = log.ToArray();
         }
 
@@ -97,18 +101,35 @@ namespace SE_Hellfire_Radar
                 case "-prev":
                     PreviousPage();
                     break;
+                case "test":
+                    Test();
+                    break;
                 default:
                     WriteLine(Argument);
                     break;
             }
         }
 
+        private void Test()
+        {
+            if (test < (maximumPages * linesPerPage))
+            {
+                WriteToLog("This a test " + test++);
+                UpdateScreen();
+            }
+
+
+        }
+
+
         private void ScrollUp()
         {
             if (currentTopLine - 1 >= 0)
             {
                 currentTopLine--;
-            } else
+                UpdateScreen();
+            }
+            else
             {
                 currentTopLine += linesPerPage;
                 PreviousPage();
@@ -117,9 +138,10 @@ namespace SE_Hellfire_Radar
 
         private void ScrollDown()
         {
-            if (currentTopLine + 1 < linesPerPage)
+            if (currentTopLine + linesPerPage < linesPerPage + maximumPages)
             {
                 currentTopLine++;
+                UpdateScreen();
             }
             else
             {
@@ -130,25 +152,31 @@ namespace SE_Hellfire_Radar
 
         private void PreviousPage()
         {
-            if(currentPageNumber - 1 >= 1)
+            if (pageNumber - linesPerPage > 0)
             {
-                currentPageNumber--;
-                UpdateScreen();
+                currentTopLine -= linesPerPage;
+            } else
+            {
+                currentTopLine = 0;
             }
+            UpdateScreen();
         }
 
         private void NextPage()
         {
-            if (currentPageNumber + 1 <= maximumPages)
+            if (pageNumber + linesPerPage < maximumPages)
             {
-                currentPageNumber++;
-                UpdateScreen();
+                currentTopLine += linesPerPage;
+            } else
+            {
+                currentTopLine = log.Count - linesPerPage;
             }
+            UpdateScreen();
         }
 
-        /// <summary>
-        /// Just deletes the whole log
-        /// </summary>
+        /// <summary> 
+        /// Just deletes the whole log 
+        /// </summary> 
         private void Delete()
         {
             log.Clear();
@@ -157,9 +185,9 @@ namespace SE_Hellfire_Radar
         }
 
 
-        /// <summary>
-        /// This will produce some bullshit ...
-        /// </summary>
+        /// <summary> 
+        /// This will produce some bullshit ... 
+        /// </summary> 
         private void Help()
         {
             WriteToLog(help);
@@ -179,33 +207,40 @@ namespace SE_Hellfire_Radar
             UpdateScreen();
         }
 
-        /// <summary>
-        /// Draws a new screen with the given variables of current pagenumber and the last pagenumber
-        /// </summary>
+        /// <summary> 
+        /// Draws a new screen with the given variables of current pagenumber and the last pagenumber 
+        /// </summary> 
         private void UpdateScreen()
         {
-            debugScreen.WritePrivateText("Debug - Page " + currentPageNumber + "/" + getLastPage(), false);
-            for(int i = (currentPageNumber * linesPerPage + currentTopLine); (i < (currentPageNumber * linesPerPage) + linesPerPage) && i < log.Count; i++)
+            lastPage = getLastPage();
+            pageNumber = getPageNumber();
+            debugScreen.WritePrivateText("Debug - Page " + pageNumber + "/" + lastPage + "\n", false);
+            for (int i = currentTopLine; i < currentTopLine + linesPerPage && i < log.Count; i++)
             {
                 debugScreen.WritePrivateText(log[i], true);
             }
         }
 
-        /// <summary>
-        /// Returns the number of pages int division of the number of lines in the log by the maximal lines per page
-        /// Probably should be revisited if there is an easier or cleaner way
-        /// </summary>
-        /// <returns>log.length/linesPerpage</returns>
+        private int getPageNumber()
+        {
+            return (currentTopLine / linesPerPage);
+        }
+
+        /// <summary> 
+        /// Returns the number of pages int division of the number of lines in the log by the maximal lines per page 
+        /// Probably should be revisited if there is an easier or cleaner way 
+        /// </summary> 
+        /// <returns>log.length/linesPerpage</returns> 
         private int getLastPage()
         {
-            return (log.Count/linesPerPage);
+            return (log.Count / linesPerPage);
         }
 
 
-        /// <summary>
-        /// Writes a new string to the log
-        /// </summary>
-        /// <param name="line">the new line that is added to the log list</param>
+        /// <summary> 
+        /// Writes a new string to the log 
+        /// </summary> 
+        /// <param name="line">the new line that is added to the log list</param> 
         private void WriteToLog(string line)
         {
             string[] lines = line.Split('\n');
@@ -214,10 +249,14 @@ namespace SE_Hellfire_Radar
             {
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    log.Add(lines[i]);
+                    log.Add(lines[i] + "\n");
+                    if (log.Count > linesPerPage && pageNumber == lastPage)
+                    {
+                        ScrollDown();
+                    }
                 }
             }
-            else
+            else if (lines.Length + log.Count == maximumPages)
             {
                 WriteToLog("Maximum logsize reached, please delete log");
             }
@@ -228,7 +267,8 @@ namespace SE_Hellfire_Radar
         {
             for (int i = 0; i < Storage.Length; i++)
             {
-                log.Add(Storage[i]);
+                //channge how this gets adressed
+                log.Add(Storage[i].ToString() + "\n");
             }
         }
 
