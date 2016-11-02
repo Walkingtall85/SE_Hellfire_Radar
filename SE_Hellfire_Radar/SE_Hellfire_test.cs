@@ -4,20 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sandbox.Common;
-using Sandbox.Definitions;
-using Sandbox.Game;
 using Sandbox.Engine;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
-using Sandbox.Game.Weapons;
-using Sandbox.ModAPI.Weapons;
 using Sandbox.Common.ObjectBuilders;
 using VRageMath;
 using VRage.ModAPI;
 
-namespace SE_Hellfire
+namespace SE_Hellfire_test
 {
-    public class HellFire_test
+    public class Program
     {
         IMyGridTerminalSystem GridTerminalSystem;
         /// <summary>
@@ -58,7 +54,7 @@ namespace SE_Hellfire
         IMyEntity target = null;
 
 
-        public void Program()
+        Program()
         {
             hf_Scanner = GridTerminalSystem.GetBlockWithName("HF_camera") as IMyCameraBlock;
             hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock;

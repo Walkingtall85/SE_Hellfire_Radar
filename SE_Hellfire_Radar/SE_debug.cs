@@ -8,16 +8,18 @@ using Sandbox.ModAPI.Interfaces;
 using VRageMath;
 using VRage.ModAPI;
 
-namespace SE_Hellfire_Radar
+namespace SE_Hellfire_Debug
 {
-    class SE_debug
+    class Program
     {
+
         IMyGridTerminalSystem GridTerminalSystem;
         string[] Storage;
 
         /// <summary>
         /// Start coping
         /// </summary>
+
 
         IMyTextPanel debugScreen;
 
@@ -26,30 +28,31 @@ namespace SE_Hellfire_Radar
             "as text on a display with the name Debug\n" +
             "It also takes certains arguments as commands:\n" +
             "-help  Shows this text\n" +
+            "-del   Deletes the content of the logfile" +
             "-up    Scrolls down by one line\n" +
             "-down  Scrolls up by one line\n" +
             "-next  Goes to the next page\n" +
             "-prev  Goes to the previous page\n"
             );
 
-        //the logfile 
+        //the logfile  
         List<string> log = new List<string>();
 
-        //int 
+        //int  
         int linesOnScreen = 0;
         int pageNumber = 1;
-        int currentTopLine = 0;
+        int currentTopLine = 1;
         int lastPage = 1;
         int test = 1;
 
-        //constants 
+        //constants  
         const string debugScreenName = "debug";
         const char lineBreak = '\n';
         const int lineBreakCount = 35;
         const int linesPerPage = 16;
         const int maximumPages = 50;
 
-        void Program()
+        Program()
         {
             debugScreen = GridTerminalSystem.GetBlockWithName("debug") as IMyTextPanel;
 
@@ -57,12 +60,13 @@ namespace SE_Hellfire_Radar
             {
                 debugScreen.WritePrivateTitle("DEBUG");
 
-                //string test = debugScreen.GetValueColor("FontColor") + " " + debugScreen.GetValueColor("BackGroundColor"); 
-                //Echo(test); 
+                //string test = debugScreen.GetValueColor("FontColor") + " " + debugScreen.GetValueColor("BackGroundColor");  
+                //Echo(test);  
 
                 if (Storage != null)
                 {
                     Echo("Restoring Logfile");
+                    Echo(Storage.ToString());
                     LoadStorage();
                 }
             }
@@ -75,8 +79,21 @@ namespace SE_Hellfire_Radar
 
         public void Save()
         {
-            // this does not work like this
-            Storage = log.ToArray();
+            // this does not work like this 
+            string[] testStorage = log.ToArray();
+
+            testStorage.CopyTo(Storage, 0);
+
+            // Fail 2
+            //Storage = String.Copy(testStorage);
+
+            // Fail 1
+            //for (int i = 0; i < testStorage.Length; i++)
+            //{
+            //    Storage += testStorage[i];
+            //}
+ 
+            
         }
 
         void Main(string Argument)
@@ -117,8 +134,6 @@ namespace SE_Hellfire_Radar
                 WriteToLog("This a test " + test++);
                 UpdateScreen();
             }
-
-
         }
 
 
@@ -155,7 +170,8 @@ namespace SE_Hellfire_Radar
             if (pageNumber - linesPerPage > 0)
             {
                 currentTopLine -= linesPerPage;
-            } else
+            }
+            else
             {
                 currentTopLine = 0;
             }
@@ -164,19 +180,20 @@ namespace SE_Hellfire_Radar
 
         private void NextPage()
         {
-            if (pageNumber + linesPerPage < maximumPages)
+            if (pageNumber < getLastPage())
             {
                 currentTopLine += linesPerPage;
-            } else
+            }
+            else
             {
                 currentTopLine = log.Count - linesPerPage;
             }
             UpdateScreen();
         }
 
-        /// <summary> 
-        /// Just deletes the whole log 
-        /// </summary> 
+        /// <summary>  
+        /// Just deletes the whole log  
+        /// </summary>  
         private void Delete()
         {
             log.Clear();
@@ -185,9 +202,9 @@ namespace SE_Hellfire_Radar
         }
 
 
-        /// <summary> 
-        /// This will produce some bullshit ... 
-        /// </summary> 
+        /// <summary>  
+        /// This will produce some bullshit ...  
+        /// </summary>  
         private void Help()
         {
             WriteToLog(help);
@@ -207,9 +224,9 @@ namespace SE_Hellfire_Radar
             UpdateScreen();
         }
 
-        /// <summary> 
-        /// Draws a new screen with the given variables of current pagenumber and the last pagenumber 
-        /// </summary> 
+        /// <summary>  
+        /// Draws a new screen with the given variables of current pagenumber and the last pagenumber  
+        /// </summary>  
         private void UpdateScreen()
         {
             lastPage = getLastPage();
@@ -226,21 +243,21 @@ namespace SE_Hellfire_Radar
             return (currentTopLine / linesPerPage);
         }
 
-        /// <summary> 
-        /// Returns the number of pages int division of the number of lines in the log by the maximal lines per page 
-        /// Probably should be revisited if there is an easier or cleaner way 
-        /// </summary> 
-        /// <returns>log.length/linesPerpage</returns> 
+        /// <summary>  
+        /// Returns the number of pages int division of the number of lines in the log by the maximal lines per page  
+        /// Probably should be revisited if there is an easier or cleaner way  
+        /// </summary>  
+        /// <returns>log.length/linesPerpage</returns>  
         private int getLastPage()
         {
             return (log.Count / linesPerPage);
         }
 
 
-        /// <summary> 
-        /// Writes a new string to the log 
-        /// </summary> 
-        /// <param name="line">the new line that is added to the log list</param> 
+        /// <summary>  
+        /// Writes a new string to the log  
+        /// </summary>  
+        /// <param name="line">the new line that is added to the log list</param>  
         private void WriteToLog(string line)
         {
             string[] lines = line.Split('\n');
@@ -265,11 +282,17 @@ namespace SE_Hellfire_Radar
 
         private void LoadStorage()
         {
-            for (int i = 0; i < Storage.Length; i++)
-            {
-                //channge how this gets adressed
-                log.Add(Storage[i].ToString() + "\n");
-            }
+            log = new List<string>(Storage);
+            
+            // Fail 2
+            //Storage.CopyTo(log, 0);
+
+            // Fail 1
+            //for (int i = 0; i < Storage.Length; i++)
+            //{
+                //channge how this gets adressed 
+            //   log.Add(Storage[i].ToString() + "\n");
+            //}
         }
 
 

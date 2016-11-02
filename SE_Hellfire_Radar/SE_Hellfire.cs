@@ -4,19 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sandbox.Common;
-using Sandbox.Definitions;
-using Sandbox.Game;
 using Sandbox.Engine;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
-using Sandbox.ModAPI.Weapons;
 using Sandbox.Common.ObjectBuilders;
 using VRageMath;
 using VRage.ModAPI;
 
 namespace SE_Hellfire
 {
-    public class HellFire
+    public class Program
     {
         IMyGridTerminalSystem GridTerminalSystem;
 
@@ -97,7 +94,7 @@ namespace SE_Hellfire
         IMyEntity target = null;
 
 
-        void Program()
+        Program()
         {
             hf_DisplayStatus = GridTerminalSystem.GetBlockWithName("HF_displayStatus") as IMyTextPanel;
             hf_DisplayLog = GridTerminalSystem.GetBlockWithName("HF_displayLog") as IMyTextPanel;
