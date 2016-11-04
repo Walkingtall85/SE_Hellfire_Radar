@@ -14,7 +14,7 @@ namespace SE_Hellfire_Debug
     {
 
         IMyGridTerminalSystem GridTerminalSystem;
-        string[] Storage;
+        string Storage;
 
         /// <summary>
         /// Start coping
@@ -79,21 +79,7 @@ namespace SE_Hellfire_Debug
 
         public void Save()
         {
-            // this does not work like this 
-            string[] testStorage = log.ToArray();
-
-            testStorage.CopyTo(Storage, 0);
-
-            // Fail 2
-            //Storage = String.Copy(testStorage);
-
-            // Fail 1
-            //for (int i = 0; i < testStorage.Length; i++)
-            //{
-            //    Storage += testStorage[i];
-            //}
- 
-            
+            Storage = String.Join(" ", log.ToArray());
         }
 
         void Main(string Argument)
@@ -282,17 +268,8 @@ namespace SE_Hellfire_Debug
 
         private void LoadStorage()
         {
-            log = new List<string>(Storage);
+            log = new List<string> { Storage };
             
-            // Fail 2
-            //Storage.CopyTo(log, 0);
-
-            // Fail 1
-            //for (int i = 0; i < Storage.Length; i++)
-            //{
-                //channge how this gets adressed 
-            //   log.Add(Storage[i].ToString() + "\n");
-            //}
         }
 
 
