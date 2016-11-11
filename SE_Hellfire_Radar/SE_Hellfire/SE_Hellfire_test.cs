@@ -7,7 +7,6 @@ using Sandbox.Common;
 using Sandbox.Engine;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
-using Sandbox.Common.ObjectBuilders;
 using VRageMath;
 using VRage.ModAPI;
 

@@ -7,8 +7,9 @@ using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
 using VRageMath;
 using VRage.ModAPI;
+using VRage.Game;
 
-namespace SE_Hellfire_Debug
+namespace SE_Debug
 {
     class Program
     {
