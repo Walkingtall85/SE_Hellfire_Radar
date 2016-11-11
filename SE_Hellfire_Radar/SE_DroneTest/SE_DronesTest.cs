@@ -32,6 +32,9 @@ namespace SE_DroneTest
         IMyRemoteControl test_Remote;
         IMySensorBlock test_Sensor;
 
+        IMyTimerBlock sensor_timer;
+        IMyTimerBlock test_timer;
+
         IMyProgrammableBlock thisBlock;
         IMyTextPanel test_Status;
 
@@ -39,6 +42,11 @@ namespace SE_DroneTest
 
         List<IMyFunctionalBlock> test_FuncSystems = new List<IMyFunctionalBlock>();
         List<IMyShipController> test_CtrlSystems = new List<IMyShipController>();
+
+        bool isTimer = false;
+        bool isSearching = true;
+
+        string currentState = "none";
 
         public Program()
         {
@@ -49,7 +57,7 @@ namespace SE_DroneTest
                 LogDisplay("Starting test systems");
             }
 
-            test_FuncSystems.InsertRange(test_FuncSystems.Count, new List<IMyFunctionalBlock> { test_Antenna, test_Camera, test_Laser, test_Sensor });
+            test_FuncSystems.InsertRange(test_FuncSystems.Count, new List<IMyFunctionalBlock> { test_Antenna, test_Camera, test_Laser, test_Sensor, sensor_timer, test_timer });
             test_CtrlSystems.InsertRange(test_CtrlSystems.Count, new List<IMyShipController> { test_Remote });
 
             test_Antenna = GridTerminalSystem.GetBlockWithName("test_antenna") as IMyRadioAntenna;
@@ -57,10 +65,10 @@ namespace SE_DroneTest
             test_Laser = GridTerminalSystem.GetBlockWithName("test_laser") as IMyLaserAntenna;
             test_Sensor = GridTerminalSystem.GetBlockWithName("test_sensor") as IMySensorBlock;
 
-
             test_Remote = GridTerminalSystem.GetBlockWithName("test_remote") as IMyRemoteControl;
 
-
+            sensor_timer = GridTerminalSystem.GetBlockWithName("sensor_timer") as IMyTimerBlock;
+            test_timer = GridTerminalSystem.GetBlockWithName("test_timer") as IMyTimerBlock;
 
             thisBlock = GridTerminalSystem.GetBlockWithName("test_programmable") as IMyProgrammableBlock;
             debug = GridTerminalSystem.GetBlockWithName("dt_debug") as IMyProgrammableBlock;
@@ -70,42 +78,90 @@ namespace SE_DroneTest
 
         void Main(string Argument)
         {
+            if (!Argument.Equals(currentState) && isTimer)
+            {
+                SensorTest(false);
+            }
+
             switch (Argument)
             {
                 case "camera":
+                    currentState = Argument;
                     cameraTest();
                     break;
                 case "remote":
+                    currentState = Argument;
                     RemoteTest();
                     break;
                 case "antenna":
-                    antennaTest();
+                    currentState = Argument;
+                    AntennaTest();
                     break;
                 case "player":
-                    playerTest();
+                    currentState = Argument;
+                    PlayerTest();
                     break;
                 case "sensor":
-                    sensorTest();
+                    SensorTest();
+                    break;
+                case "sensor_on":
+                    currentState = "sensor";
+                    SensorTest(true);
+                    break;
+                case "sensor_off":
+                    currentState = "none";
+                    SensorTest(false);
+                    break;
+                case "diagnostics":
+                    Diagnostics();
+                    currentState = "none";
+                    break;
+                case "shutdown":
+                    currentState = "none";
                     break;
                 default:
-                    
+                    LogDisplay("ERROR: Unknown Command");
                     break;
             }
         }
 
-        private void sensorTest()
+        private void SensorTest(bool sensorOn)
         {
-            LogDisplay("+++ Sensor +++");
-            LogDisplay(test_Sensor.cas);
+            if (sensorOn)
+            {
+                LogDisplay("+++ Activating Sensor +++");
+                LogDisplay("Scanning in Progress");
+                isTimer = true;
+                isSearching = true;
+
+            } else
+            {
+                LogDisplay("+++ Deactivating Sensor +++");
+                isTimer = false;
+            }
+
+            SensorTest();
+            
         }
 
-        private void playerTest()
+        private void SensorTest()
+        {
+            var target = test_Sensor.LastDetectedEntity;
+
+            if (target == null)
+            {
+                //LogDisplay(".");
+            }
+            
+        }
+
+        private void PlayerTest()
         {
             LogDisplay("+++ Camera +++");
             LogDisplay(test_Camera.CustomInfo);
         }
 
-        private void antennaTest()
+        private void AntennaTest()
         {
             LogDisplay("+++ Camera +++");
             LogDisplay(test_Camera.CustomInfo);
