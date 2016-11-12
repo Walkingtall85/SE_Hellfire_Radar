@@ -1,4 +1,5 @@
-﻿using Sandbox.Game;
+﻿#region notcopy1
+using Sandbox.Game;
 using Sandbox.ModAPI.Ingame;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace SE_TestDrone
         /// <summary>
         /// Start Coping here
         /// </summary>
+        #endregion
         #region copy
 
 
@@ -41,9 +43,10 @@ namespace SE_TestDrone
 
         bool moveTo;
         bool idling;
+        bool firstRun = true;
 
-        int minOffset = 5;
-        int maxOffset = 10;
+        int minOffset = 50;
+        int maxOffset = 100;
 
         Random r = new Random();
 
@@ -51,8 +54,8 @@ namespace SE_TestDrone
         Vector3D moveTarget;
         Vector3D currentPosition;
 
-        // For debug reasons in older version! Actually is:
-        // void Program();
+        // For debug reasons in older version! Actually is: 
+        // void Program(); 
         public void Start()
         {
             Echo("Starting...");
@@ -87,7 +90,6 @@ namespace SE_TestDrone
             Echo("Running Diagnostics...");
             if (Diagnostics())
             {
-                // this does not get the current position of the drone, AT ALL! (seams to return 0,0,0)
                 target = getPosition();
                 LogDisplay("CurrentPosition: " + target.ToString());
                 minOffset = minOffset * 100;
@@ -103,45 +105,111 @@ namespace SE_TestDrone
 
         void Main(string Argument)
         {
-            //holy crap remove this start shit
-            Start();
-            switch (Argument)
+            //holy crap remove this first run shit back in frankfurt 
+            if (firstRun)
             {
-                case "idle":
-                    currentState = Argument;
-                    idling = true;
-                    break;
-                case "moveTo":
-                    currentState = Argument;
-                    idling = false;
-                    break;
-                case "stop":
-                    currentState = Argument;
-                    idling = false;
-                    Stop();
-                    break;
-                default:
-                    Idle();
-                    break;
+                firstRun = false;
+                Start();
+            }
+            else
+            {
+                switch (Argument)
+                {
+                    case "idle":
+                        currentState = Argument;
+                        idling = true;
+                        Execute();
+                        break;
+                    case "moveTo":
+                        currentState = Argument;
+                        idling = false;
+                        break;
+                    case "stop":
+                        currentState = Argument;
+                        idling = false;
+                        Stop();
+                        break;
+                    case "info":
+                        LogDisplay("+++ Retrieving Info +++");
+                        LogDisplay(currentState + ": " + getPosition() + "\nTarget:" + moveTarget);
+                        break;
+                    case "return":
+                        LogDisplay("Returning Home");
+                        currentState = Argument;
+                        ReturnHome();
+                        break;
+                    default:
+                        Execute();
+                        break;
+                }
             }
         }
 
-        private void Idle()
+        /// <summary>
+        /// This is not properly implemented yet, as of now it only tries to find and get near the laser antenna
+        /// </summary>
+        /// This method will provide the means to find a docking station and automatically dock
+        private void ReturnHome()
+        {
+            if (test_Laser.IsPermanent)
+            {
+                Vector3D homeBase;
+                if (Vector3D.TryParse(test_Laser.DisplayNameText, out homeBase)) {
+                    LogDisplay("Retrieving GPS and setting target (home)");
+                    moveTarget = homeBase;
+                    // add method manageing moveto
+                    moveTo = true;
+                    idling = false;
+                    Execute();
+                } else
+                {
+                    LogDisplay("Something failed while retrieving GPS");
+                }
+            } else
+            {
+                LookingForReception();
+                // then try again
+            }
+        }
+
+        // Turn to look for a laser antenna (should probably memorize the last position the gps got cut off and move there after trying to turning)
+        // Maybe even ask others for reception?
+        private void LookingForReception()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void Stop()
+        {
+            test_Timer.ApplyAction("OnOff_Off");
+            test_Timer.ApplyAction("Stop");
+            test_Remote.SetAutoPilotEnabled(false);
+        }
+
+
+        private void Execute()
         {
             if (!moveTo && idling)
             {
                 moveTarget = getIdlePoint();
+                LogDisplay(currentState + ": " + moveTarget);
                 test_Remote.ClearWaypoints();
                 test_Remote.AddWaypoint(moveTarget, "idling");
                 test_Remote.SetAutoPilotEnabled(true);
                 LogDisplay("Target Pos:" + moveTarget.ToString());
+                test_Timer.ApplyAction("OnOff_On");
+                test_Timer.ApplyAction("Start");
                 idling = false;
-            } else
+                moveTo = true;
+            }
+            else if (moveTo)
             {
                 currentPosition = getPosition();
                 if (currentPosition.Equals(moveTarget))
                 {
+                    LogDisplay(currentState + ": " + moveTarget);
                     idling = true;
+                    moveTo = false;
                 }
             }
         }
@@ -157,12 +225,7 @@ namespace SE_TestDrone
 
         private Vector3D getPosition()
         {
-            return test_Remote.Position;
-        }
-
-        private void Stop()
-        {
-            test_Remote.SetAutoPilotEnabled(false);
+            return test_Remote.GetPosition();
         }
 
         bool Diagnostics()
@@ -245,6 +308,7 @@ namespace SE_TestDrone
 
         // STOP COPY HERE
         #endregion
+        #region notcopy2
 
         // helperclass - do not copy
         void Echo(string echo)
@@ -258,3 +322,4 @@ namespace SE_TestDrone
         IMyGridTerminalSystem GridTerminalSystem;
     }
 }
+#endregion
