@@ -35,18 +35,24 @@ namespace SE_TestDrone
 
         IMyCameraBlock test_Camera;
         IMyTextPanel test_Status;
+        IMyTextPanel test_Data;
 
         List<IMyFunctionalBlock> test_FuncSystems = new List<IMyFunctionalBlock>();
         List<IMyShipController> test_CtrlSystems = new List<IMyShipController>();
 
         string currentState = "none";
+        string data = "booting";
 
-        bool moveTo;
-        bool idling;
+        bool moveTo = false;
+        bool idling = false;
         bool firstRun = true;
 
-        int minOffset = 50;
-        int maxOffset = 100;
+        int minOffset = 25;
+        int maxOffset = 50;
+
+        double distanceTarget = 0;
+        double stoppingdistance = 5;
+        double safetyDistance = 800;
 
         Random r = new Random();
 
@@ -54,17 +60,19 @@ namespace SE_TestDrone
         Vector3D moveTarget;
         Vector3D currentPosition;
 
-        // For debug reasons in older version! Actually is: 
-        // void Program(); 
+        // For debug reasons in older version! Actually is:  
+        // void Program();  
         public void Start()
         {
             Echo("Starting...");
 
             test_Status = GridTerminalSystem.GetBlockWithName("test_status") as IMyTextPanel;
+            test_Data = GridTerminalSystem.GetBlockWithName("test_data") as IMyTextPanel;
 
-            if (test_Status != null)
+            if (test_Status != null && test_Data != null)
             {
                 LogDisplay("Starting test systems", false);
+                test_Data.WritePrivateText(data, false);
             }
             else
             {
@@ -81,7 +89,6 @@ namespace SE_TestDrone
 
             test_Timer = GridTerminalSystem.GetBlockWithName("test_timer") as IMyTimerBlock;
 
-            test_Status = GridTerminalSystem.GetBlockWithName("test_status") as IMyTextPanel;
 
             Echo("Creating Lists...");
             test_FuncSystems.InsertRange(test_FuncSystems.Count, new List<IMyFunctionalBlock> { test_Camera, test_Laser, test_Sensor, test_Timer });
@@ -105,7 +112,7 @@ namespace SE_TestDrone
 
         void Main(string Argument)
         {
-            //holy crap remove this first run shit back in frankfurt 
+            //holy crap remove this first run shit back in frankfurt  
             if (firstRun)
             {
                 firstRun = false;
@@ -127,6 +134,7 @@ namespace SE_TestDrone
                     case "stop":
                         currentState = Argument;
                         idling = false;
+                        moveTo = false;
                         Stop();
                         break;
                     case "info":
@@ -140,43 +148,53 @@ namespace SE_TestDrone
                         break;
                     default:
                         Execute();
+                        UpdateData();
                         break;
                 }
             }
         }
 
-        /// <summary>
-        /// This is not properly implemented yet, as of now it only tries to find and get near the laser antenna
-        /// </summary>
-        /// This method will provide the means to find a docking station and automatically dock
+        private void UpdateData()
+        {
+            data = String.Format("Status: {0}[{1}]\nLoc: {2}\nTar: {3}\nDes: {4}", currentState, distanceTarget, currentPosition, moveTarget, target);
+            test_Data.WritePrivateText(data, false);
+        }
+
+        /// <summary> 
+        /// This is not properly implemented yet, as of now it only tries to find and get near the laser antenna 
+        /// </summary> 
+        /// This method will provide the means to find a docking station and automatically dock 
         private void ReturnHome()
         {
             if (test_Laser.IsPermanent)
             {
                 Vector3D homeBase;
-                if (Vector3D.TryParse(test_Laser.DisplayNameText, out homeBase)) {
+                if (Vector3D.TryParse(test_Laser.DisplayNameText, out homeBase))
+                {
                     LogDisplay("Retrieving GPS and setting target (home)");
                     moveTarget = homeBase;
-                    // add method manageing moveto
+                    // add method manageing moveto 
                     moveTo = true;
                     idling = false;
                     Execute();
-                } else
+                }
+                else
                 {
                     LogDisplay("Something failed while retrieving GPS");
                 }
-            } else
+            }
+            else
             {
                 LookingForReception();
-                // then try again
+                // then try again 
             }
         }
 
-        // Turn to look for a laser antenna (should probably memorize the last position the gps got cut off and move there after trying to turning)
-        // Maybe even ask others for reception?
+        // Turn to look for a laser antenna (should probably memorize the last position the gps got cut off and move there after trying to turning) 
+        // Maybe even ask others for reception? 
         private void LookingForReception()
         {
-            throw new NotImplementedException();
+            Echo("not Implemented");
         }
 
         private void Stop()
@@ -192,11 +210,8 @@ namespace SE_TestDrone
             if (!moveTo && idling)
             {
                 moveTarget = getIdlePoint();
+                MoveTo(moveTarget);
                 LogDisplay(currentState + ": " + moveTarget);
-                test_Remote.ClearWaypoints();
-                test_Remote.AddWaypoint(moveTarget, "idling");
-                test_Remote.SetAutoPilotEnabled(true);
-                LogDisplay("Target Pos:" + moveTarget.ToString());
                 test_Timer.ApplyAction("OnOff_On");
                 test_Timer.ApplyAction("Start");
                 idling = false;
@@ -205,13 +220,44 @@ namespace SE_TestDrone
             else if (moveTo)
             {
                 currentPosition = getPosition();
-                if (currentPosition.Equals(moveTarget))
+                distanceTarget = euclidianDistance(currentPosition, moveTarget);
+
+                if (distanceTarget <= stoppingdistance)
                 {
+                    LogDisplay("Reached desitination");
+                    LogDisplay(currentState + ": " + moveTarget);
+                    idling = true;
+                    moveTo = false;
+                } else if (distanceTarget >= safetyDistance)
+                {
+                    LogDisplay("Reached desitination boundaries");
                     LogDisplay(currentState + ": " + moveTarget);
                     idling = true;
                     moveTo = false;
                 }
             }
+            else
+            {
+                LogDisplay(".", true);
+            }
+        }
+
+        private void MoveTo(object movetarget)
+        {
+            test_Remote.ClearWaypoints();
+            test_Remote.AddWaypoint(moveTarget, currentState);
+            test_Remote.SetAutoPilotEnabled(true);
+            LogDisplay("Target Pos[" + currentState + "]:" + moveTarget.ToString());
+        }
+
+        private double euclidianDistance(Vector3D vector1, Vector3D vector2)
+        {
+            double distance;
+            Vector3D difference = Vector3D.Subtract(vector1, vector2);
+            distance = Math.Sqrt(Math.Pow(difference.X, 2) + Math.Pow(difference.X, 2) + Math.Pow(difference.X, 2));
+            return distance;
+            //Math.Sqrt(Math.Pow((vector1.X - vector2.X), 2) + Math.Pow((vector1.Y - vector2.Y), 2) + Math.Pow((vector1.Z - vector2.Z), 2)); 
+
         }
 
         private Vector3D getIdlePoint()
