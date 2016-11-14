@@ -95,27 +95,27 @@ namespace SE_Hellfire
 
         Program()
         {
-            hf_DisplayStatus = GridTerminalSystem.GetBlockWithName("HF_displayStatus") as IMyTextPanel;
-            hf_DisplayLog = GridTerminalSystem.GetBlockWithName("HF_displayLog") as IMyTextPanel;
+            hf_DisplayStatus = GridTerminalSystem.GetBlockWithName("hf_displayStatus") as IMyTextPanel;
+            hf_DisplayLog = GridTerminalSystem.GetBlockWithName("hf_displayLog") as IMyTextPanel;
 
             LogDisplay("Hellfire booting sequence", false);
             LogDisplay("Checking components");
 
-            //hf_Camera = GridTerminalSystem.GetBlockWithName("HF_camera") as IMyCameraBlock;  
-            //hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock;  
-            //hf_Remote = GridTerminalSystem.GetBlockWithName("HF_remote") as IMyRemoteControl;  
+            //hf_Camera = GridTerminalSystem.GetBlockWithName("hf_camera") as IMyCameraBlock;  
+            //hf_Sensor = GridTerminalSystem.GetBlockWithName("hf_sensor") as IMySensorBlock;  
+            //hf_Remote = GridTerminalSystem.GetBlockWithName("hf_remote") as IMyRemoteControl;  
 
-            hf_BackupRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_b") as IMyMotorAdvancedStator;
-            hf_ActiveRotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor_a") as IMyMotorAdvancedStator;
-            hf_RotorSupport = GridTerminalSystem.GetBlockWithName("HF_supportRotor") as IMyMotorAdvancedStator;
-            hf_PistonSupport = GridTerminalSystem.GetBlockWithName("HF_supportPiston") as IMyPistonBase;
+            hf_BackupRotorSupport = GridTerminalSystem.GetBlockWithName("hf_supportRotor_b") as IMyMotorAdvancedStator;
+            hf_ActiveRotorSupport = GridTerminalSystem.GetBlockWithName("hf_supportRotor_a") as IMyMotorAdvancedStator;
+            hf_RotorSupport = GridTerminalSystem.GetBlockWithName("hf_supportRotor") as IMyMotorAdvancedStator;
+            hf_PistonSupport = GridTerminalSystem.GetBlockWithName("hf_supportPiston") as IMyPistonBase;
 
-            hf_BackupRotorHinge = GridTerminalSystem.GetBlockWithName("HF_rotor_b") as IMyMotorAdvancedStator;
-            hf_RotorHinge = GridTerminalSystem.GetBlockWithName("HF_rotor_a") as IMyMotorAdvancedStator;
-            hf_ActiveRotorHinge = GridTerminalSystem.GetBlockWithName("HF_rotor_a") as IMyMotorAdvancedStator;
+            hf_BackupRotorHinge = GridTerminalSystem.GetBlockWithName("hf_rotor_b") as IMyMotorAdvancedStator;
+            hf_RotorHinge = GridTerminalSystem.GetBlockWithName("hf_rotor_a") as IMyMotorAdvancedStator;
+            hf_ActiveRotorHinge = GridTerminalSystem.GetBlockWithName("hf_rotor_a") as IMyMotorAdvancedStator;
 
-            hf_statusTimer = GridTerminalSystem.GetBlockWithName("HF_status_Timer") as IMyTimerBlock;
-            hf_velocityTimer = GridTerminalSystem.GetBlockWithName("HF_velocity_Timer") as IMyTimerBlock;
+            hf_statusTimer = GridTerminalSystem.GetBlockWithName("hf_status_Timer") as IMyTimerBlock;
+            hf_velocityTimer = GridTerminalSystem.GetBlockWithName("hf_velocity_Timer") as IMyTimerBlock;
 
             hf_Systems.InsertRange(hf_Systems.Count, new List<IMyFunctionalBlock> { hf_ActiveRotorHinge, hf_ActiveRotorSupport, hf_PistonSupport, hf_statusTimer, hf_velocityTimer });
 
@@ -263,7 +263,7 @@ namespace SE_Hellfire
             {
                 DisplayDebug("Seting Angle to " + angle);
                 angle = DegreeToRadian(angle);
-                if (hf_ActiveRotorHinge.DisplayNameText.Equals("HF_rotor_a") && hf_ActiveRotorHinge.Angle < angle)
+                if (hf_ActiveRotorHinge.DisplayNameText.Equals("hf_rotor_a") && hf_ActiveRotorHinge.Angle < angle)
                 {
 
                 } 
@@ -539,7 +539,7 @@ namespace SE_Hellfire
 
         void SystemstatusUpdate()
         {
-            IMyTextPanel hellfireSystemStatus = GridTerminalSystem.GetBlockWithName("HF_system_Display") as IMyTextPanel;
+            IMyTextPanel hellfireSystemStatus = GridTerminalSystem.GetBlockWithName("hf_system_Display") as IMyTextPanel;
 
         }
 

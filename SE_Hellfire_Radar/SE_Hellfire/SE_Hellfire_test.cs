@@ -57,21 +57,21 @@ namespace SE_Hellfire_test
 
         Program()
         {
-            hf_Scanner = GridTerminalSystem.GetBlockWithName("HF_camera") as IMyCameraBlock;
-            hf_Sensor = GridTerminalSystem.GetBlockWithName("HF_sensor") as IMySensorBlock;
-            hf_Remote = GridTerminalSystem.GetBlockWithName("HF_remote") as IMyRemoteControl;
-            hf_Antenna = GridTerminalSystem.GetBlockWithName("HF_antenna") as IMyRadioAntenna;
-            hf_Laser = GridTerminalSystem.GetBlockWithName("HF_laser") as IMyLaserAntenna;
-            hf_Status = GridTerminalSystem.GetBlockWithName("HF_status") as IMyTextPanel;
-            thisBlock = GridTerminalSystem.GetBlockWithName("HF_Programmable") as IMyProgrammableBlock;
+            hf_Scanner = GridTerminalSystem.GetBlockWithName("hf_camera") as IMyCameraBlock;
+            hf_Sensor = GridTerminalSystem.GetBlockWithName("hf_sensor") as IMySensorBlock;
+            hf_Remote = GridTerminalSystem.GetBlockWithName("hf_remote") as IMyRemoteControl;
+            hf_Antenna = GridTerminalSystem.GetBlockWithName("hf_antenna") as IMyRadioAntenna;
+            hf_Laser = GridTerminalSystem.GetBlockWithName("hf_laser") as IMyLaserAntenna;
+            hf_Status = GridTerminalSystem.GetBlockWithName("hf_status") as IMyTextPanel;
+            thisBlock = GridTerminalSystem.GetBlockWithName("hf_programmable") as IMyProgrammableBlock;
 
-            hf_TurretA = GridTerminalSystem.GetBlockWithName("HF_TurretA") as IMyLargeTurretBase;
-            hf_TurretB = GridTerminalSystem.GetBlockWithName("HF_TurretB") as IMyLargeTurretBase;
+            hf_TurretA = GridTerminalSystem.GetBlockWithName("hf_TurretA") as IMyLargeTurretBase;
+            hf_TurretB = GridTerminalSystem.GetBlockWithName("hf_TurretB") as IMyLargeTurretBase;
 
             systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_Antenna, hf_Laser,
 hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
 
-            statusDisplay("Hellfire Sustem: starting", false);
+            LogsDisplay("Hellfire System: starting", false);
             getStatus();
         }
 
@@ -105,13 +105,13 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                     break;
                 case "cls":
                 case "clear":
-                    statusDisplay("cls...", false);
+                    LogsDisplay("cls...", false);
                     break;
                 case "help":
                 case "/h":
                 case "h":
                 default:
-                    statusDisplay(helpString);
+                    LogsDisplay(helpString);
                     break;
             }
         }
@@ -122,10 +122,10 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
             {
                 if (!azimuthA.Equals(hf_TurretA.Azimuth.ToString()))
                 {
-                    statusDisplay("+++" + " TURRET A " + "+++");
+                    LogsDisplay("+++" + " TURRET A " + "+++");
                     azimuthA = hf_TurretA.Azimuth.ToString();
-                    statusDisplay(azimuthA);
-                    statusDisplay(hf_TurretA.DetailedInfo);
+                    LogsDisplay(azimuthA);
+                    LogsDisplay(hf_TurretA.DetailedInfo);
                 }
             }
 
@@ -133,10 +133,10 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
             {
                 if (!azimuthB.Equals(hf_TurretB.Azimuth.ToString()))
                 {
-                    statusDisplay("+++" + " TURRET B " + "+++");
+                    LogsDisplay("+++" + " TURRET B " + "+++");
                     azimuthB = hf_TurretB.Azimuth.ToString();
-                    statusDisplay(azimuthB);
-                    statusDisplay(hf_TurretB.DetailedInfo);
+                    LogsDisplay(azimuthB);
+                    LogsDisplay(hf_TurretB.DetailedInfo);
                 }
             }
 
@@ -144,65 +144,90 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
 
         private void getAzimut()
         {
-            statusDisplay("+++" + " NOT IMPLEMENTED " + "+++");
+            LogsDisplay("+++" + " NOT IMPLEMENTED " + "+++");
         }
 
         private void getRemote()
         {
-            statusDisplay("+++" + hf_Remote.CustomInfo + "+++");
-            statusDisplay(hf_Remote.DetailedInfo);
-            statusDisplay("Position:" + getEnemyPosition().ToString());
+            LogsDisplay("+++" + hf_Remote.CustomInfo + "+++");
+            LogsDisplay(hf_Remote.DetailedInfo);
+            LogsDisplay("Position:" + getEnemyPosition().ToString());
         }
 
 
         private Vector3D getEnemyPosition()
         {
-            Vector3D position = hf_Remote.GetFreeDestination(probe, radius1, sample);
+            LogsDisplay("Probing environment...");
 
+            int x = 1;
+            Vector3D result = hf_Remote.GetFreeDestination(probe, radius1, sample);
 
-            return position;
+            if (result.Equals(probe)) {
+                LogsDisplay("Probe " + x + ": Found nothing");
+            } else {
+                LogsDisplay("Probe " + x + ": " + result + "\non " + probe);
+                for (int i = 0; i < 10; i++)
+                {
+                    if (result.X < probe.X || result.Y < probe.Y || result.Z < probe.Z)
+                    {
+                        probe.X = probe.X - (probe.X - result.X);
+                        probe.Y = probe.Y - (probe.Y - result.Y);
+                        probe.Z = probe.Z - (probe.Z - result.Z);
+
+                        result = hf_Remote.GetFreeDestination(probe, radius1, sample);
+                        LogsDisplay("Probe " + x + ": " + result + "\non " + probe);
+                    }
+                    // need to find a good break condition so that size of the target bounding sphere is proben and not more:
+                    // First probe finds right/left boundary
+                    // Second probe might find the other one, if it has a too similar one it needs to look further and so forth.
+                    // Probably (well most likely) the current implementation does not work this way anyways....
+
+                }
+            }
+
+            return result;
         }
 
         private void getSensor()
         {
-            statusDisplay("+++" + hf_Sensor.CustomInfo + "+++");
-            statusDisplay(hf_Sensor.DetailedInfo);
-            statusDisplay(hf_Sensor.LastDetectedEntity.GetPosition().ToString());
+            LogsDisplay("+++" + hf_Sensor.CustomInfo + "+++");
+            LogsDisplay(hf_Sensor.DetailedInfo);
+            LogsDisplay(hf_Sensor.LastDetectedEntity.GetPosition().ToString());
         }
 
         private void getLaser()
         {
-            statusDisplay("+++" + hf_Laser.CustomInfo);
-            statusDisplay(hf_Laser.DetailedInfo);
+            LogsDisplay("+++" + hf_Laser.CustomInfo);
+            LogsDisplay(hf_Laser.DetailedInfo);
             //statusDisplay(hf_Laser.);  
         }
 
         private void getCamera()
         {
-            statusDisplay("+++" + hf_Scanner.CustomInfo + "+++");
-            statusDisplay(hf_Scanner.DetailedInfo);
+            LogsDisplay("+++" + hf_Scanner.CustomInfo + "+++");
+            LogsDisplay(hf_Scanner.DetailedInfo);
             //statusDisplay(hf_Scanner.);  
         }
 
         private void getAntenna()
         {
-            statusDisplay("+++" + hf_Antenna.CustomInfo + "+++");
-            statusDisplay(hf_Antenna.DetailedInfo);
+            LogsDisplay("+++" + hf_Antenna.CustomInfo + "+++");
+            LogsDisplay(hf_Antenna.DetailedInfo);
             //statusDisplay(hf_Antenna.);  
         }
 
-        void statusDisplay(string status)
+        void LogsDisplay(string status)
         {
-            statusDisplay(status, true);
+            LogsDisplay(status, true);
         }
-        void statusDisplay(string status, bool append)
+        void LogsDisplay(string status, bool append)
         {
             hf_Status.WritePrivateText(status + "\n", append);
         }
 
         void getStatus()
         {
-            statusDisplay("Running diagnostics...");
+            LogsDisplay("Running diagnostics...");
 
             if (Diagnostics())
             {
@@ -213,7 +238,7 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                 hellfireStatus = "malfunction";
             }
 
-            statusDisplay("Hellfire systems: " + hellfireStatus);
+            LogsDisplay("Hellfire systems: " + hellfireStatus);
         }
 
         public bool Diagnostics()
@@ -231,7 +256,7 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                     tempStatus = ("Status: " + systems[i].CustomName + " has an error");
                     temp = false;
                 }
-                statusDisplay(tempStatus);
+                LogsDisplay(tempStatus);
             }
 
             if (hf_Remote.IsFunctional)
@@ -243,7 +268,7 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                 tempStatus = ("Status: " + hf_Remote.CustomName + " has an error");
                 temp = false;
             }
-            statusDisplay(tempStatus);
+            LogsDisplay(tempStatus);
 
             return temp;
         }
@@ -299,9 +324,15 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
         float GetTargetDistance()
         {
             float distance = 150;
+            float altDistance = 150;
             if (target != null)
-
+            {
+                // alt:
+                altDistance = (float)(LastShipPos - LastTargetPos).Length();
                 distance = (float)Math.Sqrt(LastShipPos.X * LastTargetPos.X + LastShipPos.Y * LastTargetPos.Y + LastShipPos.Z * LastTargetPos.Z);
+            }
+                
+            LogsDisplay("Distance: " + distance + "\nAlt. Distance: " + altDistance);
             return distance;
         }
 
