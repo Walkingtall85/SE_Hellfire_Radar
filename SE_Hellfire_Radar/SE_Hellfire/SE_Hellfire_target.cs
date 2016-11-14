@@ -1,4 +1,5 @@
-﻿using System;
+﻿#region dontCopy1
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,37 +11,33 @@ using Sandbox.ModAPI.Interfaces;
 using VRageMath;
 using VRage.ModAPI;
 
-namespace SE_Hellfire_test
+namespace SE_Hellfire_target
 {
     public class Program
     {
         IMyGridTerminalSystem GridTerminalSystem;
+
+        internal interface IMyTimerBlock : IMyFunctionalBlock
+        {
+            bool IsCountingDown { get; }
+            float TriggerDelay { get; set; }
+        };
         /// <summary>
         /// START COPYING HERE
         /// </summary>
+        #endregion
 
         IMyProgrammableBlock thisBlock;
-        IMyCameraBlock hf_Scanner;
-        IMySensorBlock hf_Sensor;
-        IMyRadioAntenna hf_Antenna;
-        IMyLaserAntenna hf_Laser;
         IMyRemoteControl hf_Remote;
         IMyTextPanel hf_Status;
-        //IMyTimerBlock hf_timer;  
+        IMyTimerBlock hf_Timer;
         IMyFunctionalBlock hf_;
-        IMyLargeTurretBase hf_TurretA;
-        IMyLargeTurretBase hf_TurretB;
 
         //Lists  
-        List<IMyFunctionalBlock> systems = new List<IMyFunctionalBlock>();
+        List<IMyTerminalBlock> systems = new List<IMyTerminalBlock>();
 
         //strings  
         string targetStatus = "none";
-        string hellfireStatus = "none";
-        string helpString = "Commands:\n antenna, camera, laser,\n sensor, azimut, status,\n turret, clear, help";
-        string azimuthA = "0";
-        string azimuthB = "0";
-
 
         //constants  
         float hellfireLength = 30;
@@ -49,29 +46,27 @@ namespace SE_Hellfire_test
         Vector3D LastShipPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D LastTargetPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D targetPosition = new Vector3D(0.0, 0.0, 0.0);
+        Vector3D probe;
 
         IMyEntity target = null;
-        private Vector3D probe;
+
+        string helpString = "Use the numkeys to choose\na target from the list\nPress 1 to continue";
+        
         private float radius1;
         private float sample;
+        private bool chooseTarget;
 
         Program()
         {
-            hf_Scanner = GridTerminalSystem.GetBlockWithName("hf_camera") as IMyCameraBlock;
-            hf_Sensor = GridTerminalSystem.GetBlockWithName("hf_sensor") as IMySensorBlock;
+
             hf_Remote = GridTerminalSystem.GetBlockWithName("hf_remote") as IMyRemoteControl;
-            hf_Antenna = GridTerminalSystem.GetBlockWithName("hf_antenna") as IMyRadioAntenna;
-            hf_Laser = GridTerminalSystem.GetBlockWithName("hf_laser") as IMyLaserAntenna;
             hf_Status = GridTerminalSystem.GetBlockWithName("hf_status") as IMyTextPanel;
+            hf_Timer = GridTerminalSystem.GetBlockWithName("hf_timer") as IMyTimerBlock;
             thisBlock = GridTerminalSystem.GetBlockWithName("hf_programmable") as IMyProgrammableBlock;
 
-            hf_TurretA = GridTerminalSystem.GetBlockWithName("hf_TurretA") as IMyLargeTurretBase;
-            hf_TurretB = GridTerminalSystem.GetBlockWithName("hf_TurretB") as IMyLargeTurretBase;
+            systems.InsertRange(systems.Count, new List<IMyTerminalBlock> { hf_Status, hf_Remote, thisBlock});
 
-            systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_Antenna, hf_Laser,
-hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
-
-            LogsDisplay("Hellfire System: starting", false);
+            LogsDisplay("Hellfire target system: starting", false);
             getStatus();
         }
 
@@ -79,26 +74,25 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
         {
             switch (Argument)
             {
-                case "antenna":
-                    getAntenna();
+                case "radar":
+                    getRadarImage();
                     break;
-                case "camera":
-                    getCamera();
+                case "update":
+                    getUpdate();
                     break;
-                case "laser":
-                    getLaser();
+                case "1":
+                case "2":
+                case "3":
+                case "4":
+                case "5":
+                case "6":
+                case "7":
+                case "8":
+                case "9":
+                    getTarget();
                     break;
-                case "sensor":
-                    getSensor();
-                    break;
-                case "azimut":
-                    getAzimut();
-                    break;
-                case "status":
-                    getStatus();
-                    break;
-                case "turret":
-                    getTurret();
+                case "list":
+                    getList();
                     break;
                 case "remote":
                     getRemote();
@@ -110,41 +104,32 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                 case "help":
                 case "/h":
                 case "h":
-                default:
                     LogsDisplay(helpString);
+                    break;
+                default:
+                    // update?
                     break;
             }
         }
 
-        private void getTurret()
+        private void getList()
         {
-            lock (hf_TurretA)
-            {
-                if (!azimuthA.Equals(hf_TurretA.Azimuth.ToString()))
-                {
-                    LogsDisplay("+++" + " TURRET A " + "+++");
-                    azimuthA = hf_TurretA.Azimuth.ToString();
-                    LogsDisplay(azimuthA);
-                    LogsDisplay(hf_TurretA.DetailedInfo);
-                }
-            }
-
-            lock (hf_TurretB)
-            {
-                if (!azimuthB.Equals(hf_TurretB.Azimuth.ToString()))
-                {
-                    LogsDisplay("+++" + " TURRET B " + "+++");
-                    azimuthB = hf_TurretB.Azimuth.ToString();
-                    LogsDisplay(azimuthB);
-                    LogsDisplay(hf_TurretB.DetailedInfo);
-                }
-            }
-
+            //throw new NotImplementedException();
         }
 
-        private void getAzimut()
+        private void getRadarImage()
         {
-            LogsDisplay("+++" + " NOT IMPLEMENTED " + "+++");
+            //throw new NotImplementedException();
+        }
+
+        private void getTarget()
+        {
+            //throw new NotImplementedException();
+        }
+
+        private void getUpdate()
+        {
+            //throw new NotImplementedException();
         }
 
         private void getRemote()
@@ -189,33 +174,6 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
             return result;
         }
 
-        private void getSensor()
-        {
-            LogsDisplay("+++" + hf_Sensor.CustomInfo + "+++");
-            LogsDisplay(hf_Sensor.DetailedInfo);
-            LogsDisplay(hf_Sensor.LastDetectedEntity.GetPosition().ToString());
-        }
-
-        private void getLaser()
-        {
-            LogsDisplay("+++" + hf_Laser.CustomInfo);
-            LogsDisplay(hf_Laser.DetailedInfo);
-            //statusDisplay(hf_Laser.);  
-        }
-
-        private void getCamera()
-        {
-            LogsDisplay("+++" + hf_Scanner.CustomInfo + "+++");
-            LogsDisplay(hf_Scanner.DetailedInfo);
-            //statusDisplay(hf_Scanner.);  
-        }
-
-        private void getAntenna()
-        {
-            LogsDisplay("+++" + hf_Antenna.CustomInfo + "+++");
-            LogsDisplay(hf_Antenna.DetailedInfo);
-            //statusDisplay(hf_Antenna.);  
-        }
 
         void LogsDisplay(string status)
         {
@@ -232,14 +190,12 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
 
             if (Diagnostics())
             {
-                hellfireStatus = "standby";
+                LogsDisplay("All systems functional");
             }
             else
             {
-                hellfireStatus = "malfunction";
+                LogsDisplay("There has been an error with the system");
             }
-
-            LogsDisplay("Hellfire systems: " + hellfireStatus);
         }
 
         public bool Diagnostics()
@@ -259,17 +215,6 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                 }
                 LogsDisplay(tempStatus);
             }
-
-            if (hf_Remote.IsFunctional)
-            {
-                tempStatus = ("Status: " + hf_Remote.CustomName + " is okay");
-            }
-            else
-            {
-                tempStatus = ("Status: " + hf_Remote.CustomName + " has an error");
-                temp = false;
-            }
-            LogsDisplay(tempStatus);
 
             return temp;
         }
@@ -298,26 +243,15 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
 
         Vector3D GetHellfirePosition()
         {
-            Vector3D hellfirePosition = GridTerminalSystem.GetBlockWithName("Hellfire").GetPosition();
-            return hellfirePosition;
+            Vector3D position = hf_Remote.GetPosition();
+            return position;
         }
 
         Vector3D GetTargetPosition()
         {
             Vector3D position = new Vector3D(0, 0, 0);
-            if (hf_Sensor.IsActive)
-            {
-                if (hf_Sensor.LastDetectedEntity != null && hf_Sensor.LastDetectedEntity != target)
-                {
-                    target = hf_Sensor.LastDetectedEntity;
-                    LastTargetPos = target.GetPosition(); //reset last pos to fix vel later 
-                }
-            }
-            if (target != null)
-            {
-                position = target.GetPosition();
-                LastTargetPos = position;
-            }
+
+
             return position; //just aim ahead if nothing found yet 
         }
 
@@ -338,6 +272,13 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
         }
 
         // STOP COMPY
+        #region dontCopy2
+        void Echo(string message)
+        {
+            LogsDisplay(message);
+        }
+
+        #endregion
 
     }
 }
