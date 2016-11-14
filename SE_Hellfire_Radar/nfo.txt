@@ -1,0 +1,3 @@
+﻿Notes for SPACE ENGINEERS
+GPS FORMAT = TAG:NAME:X:Y:Z:
+GPS:Between Bases:-1197.31:-764.46:-144.85:

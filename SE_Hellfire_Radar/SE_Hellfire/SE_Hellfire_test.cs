@@ -51,7 +51,9 @@ namespace SE_Hellfire_test
         Vector3D targetPosition = new Vector3D(0.0, 0.0, 0.0);
 
         IMyEntity target = null;
-
+        private Vector3D probe;
+        private float radius1;
+        private float sample;
 
         Program()
         {
@@ -97,6 +99,9 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
                     break;
                 case "turret":
                     getTurret();
+                    break;
+                case "remote":
+                    getRemote();
                     break;
                 case "cls":
                 case "clear":
@@ -146,6 +151,16 @@ hf_Scanner, hf_Sensor, hf_Status, hf_TurretA, hf_TurretB});
         {
             statusDisplay("+++" + hf_Remote.CustomInfo + "+++");
             statusDisplay(hf_Remote.DetailedInfo);
+            statusDisplay("Position:" + getEnemyPosition().ToString());
+        }
+
+
+        private Vector3D getEnemyPosition()
+        {
+            Vector3D position = hf_Remote.GetFreeDestination(probe, radius1, sample);
+
+
+            return position;
         }
 
         private void getSensor()

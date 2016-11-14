@@ -62,7 +62,7 @@ namespace SE_TestDrone
 
         // For debug reasons in older version! Actually is:  
         // void Program();  
-        public void Start()
+        public Program()
         {
             Echo("Starting...");
 
@@ -112,45 +112,37 @@ namespace SE_TestDrone
 
         void Main(string Argument)
         {
-            //holy crap remove this first run shit back in frankfurt  
-            if (firstRun)
+
+            switch (Argument)
             {
-                firstRun = false;
-                Start();
-            }
-            else
-            {
-                switch (Argument)
-                {
-                    case "idle":
-                        currentState = Argument;
-                        idling = true;
-                        Execute();
-                        break;
-                    case "moveTo":
-                        currentState = Argument;
-                        idling = false;
-                        break;
-                    case "stop":
-                        currentState = Argument;
-                        idling = false;
-                        moveTo = false;
-                        Stop();
-                        break;
-                    case "info":
-                        LogDisplay("+++ Retrieving Info +++");
-                        LogDisplay(currentState + ": " + getPosition() + "\nTarget:" + moveTarget);
-                        break;
-                    case "return":
-                        LogDisplay("Returning Home");
-                        currentState = Argument;
-                        ReturnHome();
-                        break;
-                    default:
-                        Execute();
-                        UpdateData();
-                        break;
-                }
+                case "idle":
+                    currentState = Argument;
+                    idling = true;
+                    Execute();
+                    break;
+                case "moveTo":
+                    currentState = Argument;
+                    idling = false;
+                    break;
+                case "stop":
+                    currentState = Argument;
+                    idling = false;
+                    moveTo = false;
+                    Stop();
+                    break;
+                case "info":
+                    LogDisplay("+++ Retrieving Info +++");
+                    LogDisplay(currentState + ": " + getPosition() + "\nTarget:" + moveTarget);
+                    break;
+                case "return":
+                    LogDisplay("Returning Home");
+                    currentState = Argument;
+                    ReturnHome();
+                    break;
+                default:
+                    Execute();
+                    UpdateData();
+                    break;
             }
         }
 
