@@ -26,47 +26,55 @@ namespace SE_Hellfire_target
         /// START COPYING HERE
         /// </summary>
         #endregion
-
         IMyProgrammableBlock thisBlock;
         IMyRemoteControl hf_Remote;
         IMyTextPanel hf_Status;
         IMyTimerBlock hf_Timer;
         IMyFunctionalBlock hf_;
 
-        //Lists  
+        //Lists    
         List<IMyTerminalBlock> systems = new List<IMyTerminalBlock>();
 
-        //strings  
+        //strings    
         string targetStatus = "none";
 
-        //constants  
+        //constants    
         float hellfireLength = 30;
 
-        //Vectors  
+        //Vectors    
         Vector3D LastShipPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D LastTargetPos = new Vector3D(0.0, 0.0, 0.0);
         Vector3D targetPosition = new Vector3D(0.0, 0.0, 0.0);
+
+        Vector3D testTarget = new Vector3D(1703.61, -232.48, 103.7);
+
         Vector3D probe;
+        Vector3D sample;
+
+        List<Vector3D> targets = new List<Vector3D>();
+
+        int probeSteps = 1;
 
         IMyEntity target = null;
 
         string helpString = "Use the numkeys to choose\na target from the list\nPress 1 to continue";
-        
-        private float radius1;
-        private float sample;
+
+        private float radius1 = 50;
+        private float sampleSize;
         private bool chooseTarget;
+        private bool detected;
 
         Program()
         {
-
+            Echo("starting...");
             hf_Remote = GridTerminalSystem.GetBlockWithName("hf_remote") as IMyRemoteControl;
             hf_Status = GridTerminalSystem.GetBlockWithName("hf_status") as IMyTextPanel;
             hf_Timer = GridTerminalSystem.GetBlockWithName("hf_timer") as IMyTimerBlock;
             thisBlock = GridTerminalSystem.GetBlockWithName("hf_programmable") as IMyProgrammableBlock;
 
-            systems.InsertRange(systems.Count, new List<IMyTerminalBlock> { hf_Status, hf_Remote, thisBlock});
+            systems.InsertRange(systems.Count, new List<IMyTerminalBlock> { hf_Status, hf_Remote, thisBlock });
 
-            LogsDisplay("Hellfire target system: starting", false);
+            LogsDisplay("Hellfire target test: system starting", false);
             getStatus();
         }
 
@@ -97,6 +105,9 @@ namespace SE_Hellfire_target
                 case "remote":
                     getRemote();
                     break;
+                case "probe":
+                    getEnemyPosition();
+                    break;
                 case "cls":
                 case "clear":
                     LogsDisplay("cls...", false);
@@ -107,71 +118,77 @@ namespace SE_Hellfire_target
                     LogsDisplay(helpString);
                     break;
                 default:
-                    // update?
+                    // update?  
                     break;
             }
         }
 
         private void getList()
         {
-            //throw new NotImplementedException();
+            //throw new NotImplementedException();  
         }
 
         private void getRadarImage()
         {
-            //throw new NotImplementedException();
+            //throw new NotImplementedException();  
         }
 
         private void getTarget()
         {
-            //throw new NotImplementedException();
+            //throw new NotImplementedException();  
         }
 
         private void getUpdate()
         {
-            //throw new NotImplementedException();
+            //throw new NotImplementedException();  
         }
 
         private void getRemote()
         {
-            LogsDisplay("+++" + hf_Remote.CustomInfo + "+++");
-            LogsDisplay(hf_Remote.DetailedInfo);
-            LogsDisplay("Position:" + getEnemyPosition().ToString());
+            LogsDisplay(testTarget.ToString(), false);
+            LogsDisplay(hf_Remote.WorldMatrix.Forward.ToString());
+            probe = hf_Remote.GetPosition() + hf_Remote.WorldMatrix.Forward;
+            Vector3D probe1 = hf_Remote.GetFreeDestination(probe, radius1, 0.01f);
+            detected = (probe != probe1);
+
+            //LogsDisplay("pos: " + hf_Remote.GetPosition() + "\n\n mag:" + probe.Length() + "\n wm:" +  
+            //hf_Remote.WorldMatrix.Forward + "\n p:" + probe + "\n 1:" + probe1 + "\n\n" + "Detected: " + detected +  
+            //"\n\nTest:\n"); 
+            LogsDisplay("pos: " + hf_Remote.GetPosition() + "\np:" + probe + "\n 1:" + probe1 + "\n\n" + "Detected: " + detected +
+"\n\nTest:\n");
+
+            for (int i = 0; i < 10; i++)
+            {
+                Vector3D offset = hf_Remote.WorldMatrix.Forward * (i * 100);
+                Vector3D testProbe = testTarget + offset;
+                Vector3D test1 = hf_Remote.GetFreeDestination(testProbe, radius1, 0.01f);
+                LogsDisplay(testProbe + "\n" + test1 + "\n--");
+
+            }
+
+            //getEnemyPosition();  
         }
 
 
-        private Vector3D getEnemyPosition()
+        private void getEnemyPosition()
         {
-            LogsDisplay("Probing environment...");
+            LogsDisplay("Probing environment... step " + probeSteps);
 
-            int x = 1;
-            Vector3D result = hf_Remote.GetFreeDestination(probe + hf_Remote.WorldMatrix.Forward, radius1, sample);
+            for (int i = 0; i < 10; i++)
+            {
 
-            if (result.Equals(probe)) {
-                LogsDisplay("Probe " + x + ": Found nothing");
-            } else {
-                
-                LogsDisplay("Probe " + x + ": " + result + "\non " + probe);
-                for (int i = 0; i < 10; i++)
+                sample = hf_Remote.GetFreeDestination(probe + hf_Remote.WorldMatrix.Forward, radius1, 0.0f);
+
+                if (sample != probe)
                 {
-                    if (result.X < probe.X || result.Y < probe.Y || result.Z < probe.Z)
-                    {
-                        probe.X = probe.X - (probe.X - result.X);
-                        probe.Y = probe.Y - (probe.Y - result.Y);
-                        probe.Z = probe.Z - (probe.Z - result.Z);
-
-                        result = hf_Remote.GetFreeDestination(probe, radius1, sample);
-                        LogsDisplay("Probe " + x + ": " + result + "\non " + probe);
-                    }
-                    // need to find a good break condition so that size of the target bounding sphere is proben and not more:
-                    // First probe finds right/left boundary
-                    // Second probe might find the other one, if it has a too similar one it needs to look further and so forth.
-                    // Probably (well most likely) the current implementation does not work this way anyways....
-
+                    // this returns the position of a bounding sphere with an offset of its size  
+                    targets.Add(sample);
                 }
+
+
             }
 
-            return result;
+            probeSteps++;
         }
 
 
@@ -252,7 +269,7 @@ namespace SE_Hellfire_target
             Vector3D position = new Vector3D(0, 0, 0);
 
 
-            return position; //just aim ahead if nothing found yet 
+            return position; //just aim ahead if nothing found yet   
         }
 
 
@@ -262,23 +279,26 @@ namespace SE_Hellfire_target
             float altDistance = 150;
             if (target != null)
             {
-                // alt:
+                // alt:  
                 altDistance = (float)(LastShipPos - LastTargetPos).Length();
                 distance = (float)Math.Sqrt(LastShipPos.X * LastTargetPos.X + LastShipPos.Y * LastTargetPos.Y + LastShipPos.Z * LastTargetPos.Z);
             }
-                
+
             LogsDisplay("Distance: " + distance + "\nAlt. Distance: " + altDistance);
             return distance;
         }
 
-        // STOP COMPY
-        #region dontCopy2
-        void Echo(string message)
+
+
+
+        #region endcopy
+        public void Echo(string test)
         {
-            LogsDisplay(message);
+            LogsDisplay(test);
         }
 
-        #endregion
+        
 
     }
 }
+#endregion
