@@ -64,6 +64,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="other\3D_radar.cs" />
+    <Compile Include="other\azimut.cs" />
+    <Compile Include="other\getdirectionfree.cs" />
+    <Compile Include="other\ship_projection.cs" />
     <Compile Include="SE_Debug\SE_Debug.cs" />
     <Compile Include="SE_DroneTest\SE_DronesTest.cs" />
     <Compile Include="SE_DroneTest\SE_TestDrone.cs" />

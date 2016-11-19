@@ -9,7 +9,7 @@ using Sandbox.Engine;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
 using VRageMath;
-using VRage.ModAPI;
+using VRage.Game.ModAPI.Ingame;
 
 namespace SE_Hellfire_target
 {

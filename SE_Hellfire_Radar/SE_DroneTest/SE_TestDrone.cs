@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VRageMath;
 using VRage.ModAPI;
+using VRage.Game.ModAPI.Ingame;
 
 namespace SE_TestDrone
 {
