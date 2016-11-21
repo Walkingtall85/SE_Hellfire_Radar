@@ -41,7 +41,7 @@ namespace SE_Hellfire_test
         string azimuthA = "0";
         string azimuthB = "0";
 
-
+        
         //constants  
         float hellfireLength = 30;
 

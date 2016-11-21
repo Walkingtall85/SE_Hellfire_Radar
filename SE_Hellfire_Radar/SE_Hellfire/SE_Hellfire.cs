@@ -35,7 +35,6 @@ namespace SE_Hellfire
         IMyTimerBlock hf_statusTimer;
         IMyTimerBlock hf_velocityTimer;
 
-
         IMyTextPanel hf_DisplayLog;
         IMyTextPanel hf_DisplayStatus;
 

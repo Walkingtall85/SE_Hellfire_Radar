@@ -67,10 +67,12 @@
     <Compile Include="other\3D_radar.cs" />
     <Compile Include="other\azimut.cs" />
     <Compile Include="other\getdirectionfree.cs" />
+    <Compile Include="other\Program.cs" />
     <Compile Include="other\ship_projection.cs" />
     <Compile Include="SE_Debug\SE_Debug.cs" />
     <Compile Include="SE_DroneTest\SE_DronesTest.cs" />
     <Compile Include="SE_DroneTest\SE_TestDrone.cs" />
+    <Compile Include="SE_Hellfire\RotationController.cs" />
     <Compile Include="SE_Hellfire\SE_Hellfire_target.cs" />
     <Compile Include="SE_Hellfire\SE_Hellfire_test.cs" />
     <Compile Include="SE_Hellfire\SE_Hellfire.cs" />
