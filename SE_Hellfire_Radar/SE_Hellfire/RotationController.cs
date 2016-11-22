@@ -203,9 +203,9 @@ namespace RotationController
 
             if (!hingeStatus.Equals("closing"))
             {
-                hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), checkAngle(opened));
+                setUpperLimit(opened);
 
-                hf_RotorHinge.SetValueFloat("Velocity", getHingeVelocity());
+                setHingeVelocity("opening", hellfireVelocity);
 
                 LogDisplay("Opening in Progress");
             }
@@ -225,9 +225,9 @@ namespace RotationController
             {
                 LogDisplay("Closing in Progress");
 
-                hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), checkAngle(closed));
+                setLowerLimit(closed);
 
-                hf_RotorHinge.SetValueFloat("Velocity", -(getHingeVelocity()));
+                setHingeVelocity("closing", hellfireVelocity);
             }
             else
             {
@@ -235,15 +235,28 @@ namespace RotationController
             }
         }
 
-        private float getHingeVelocity()
+        // could probably be much easier
+        private void setHingeVelocity(string option, float newVelocity)
         {
-            float result = hellfireVelocity;
-            if (backupHinge)
+            if(option.Equals("closing"))
             {
-                result = -hellfireVelocity;
+                if (backupHinge)
+                {
+                    newVelocity = -hellfireVelocity;
+                }
+            } else if (option.Equals("opening"))
+            {
+                if (!backupHinge)
+                {
+                    newVelocity = -hellfireVelocity;
+                }
+            } else
+            {
+                LogDisplay("Velocity: Command not regocnized '" + option + "' - Emergency stop");
+                newVelocity = 0f;
             }
 
-            return result;
+            hf_RotorHinge.SetValueFloat("Velocity", newVelocity);
         }
 
         private float checkAngle(float angle)
