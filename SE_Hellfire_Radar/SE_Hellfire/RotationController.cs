@@ -57,9 +57,10 @@ namespace RotationController
         const float rocketSpeed = 100.0f;
 
         float currentAngle;
+        float currentVelocity;
 
         private bool backupHinge = false;
-
+        private int currentTopLine;
 
         public Program()
         {
@@ -69,7 +70,8 @@ namespace RotationController
             if (hf_DisplayLog == null)
             {
                 Echo("No display 'hf_displayStatus' found");
-            } else
+            }
+            else
             {
                 LogDisplay(programName + " is booting up" + false);
             }
@@ -77,7 +79,16 @@ namespace RotationController
             hf_RotorHinge = GridTerminalSystem.GetBlockWithName("hf_rotor_a") as IMyMotorAdvancedStator;
             hf_statusTimer = GridTerminalSystem.GetBlockWithName("hf_status_Timer") as IMyTimerBlock;
 
-            systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_RotorHinge, hf_statusTimer });
+            systems.InsertRange(systems.Count, new List<IMyFunctionalBlock> { hf_RotorHinge });
+
+            if (getVelocity() > 0)
+            {
+                hingeStatus = "opening";
+            }
+            else if (getVelocity() < 0)
+            {
+                hingeStatus = "closing";
+            }
 
             getStatus();
             updateStatus();
@@ -90,7 +101,8 @@ namespace RotationController
             if (int.TryParse(argument, out targetDistance))
             {
                 setHingeRotationtoDistance(targetDistance);
-            } else
+            }
+            else
             {
                 switch (argument)
                 {
@@ -105,15 +117,25 @@ namespace RotationController
                     case "update":
                         updateStatus();
                         break;
+                    case "reset":
+                        reset();
+                        break;
                     default:
                         LogDisplay("Wrong argument: " + argument);
                         break;
                 }
             }
-            
-
         }
 
+        private void reset()
+        {
+            setUpperLimit(opened);
+            setLowerLimit(closed);
+            setHingeVelocity("none", 0);
+        }
+
+        // this just totally breaks the whole system - rewrite reason might be the backup / !backup logic  
+        // Theta might be radian and I need to be degree
         private void setHingeRotationtoDistance(int targetDistance)
         {
             double theta;
@@ -122,10 +144,10 @@ namespace RotationController
             setRotation((float)theta);
         }
 
-
-        private void setRotation(float angle){
+        private void setRotation(float angle)
+        {
             angle = checkAngle(angle);
-            currentAngle = hf_RotorHinge.Angle;
+            currentAngle = getAngle();
             if (Math.Abs(Math.Abs(angle) - Math.Abs(currentAngle)) > threshold)
             {
                 changeRotation(angle);
@@ -135,45 +157,60 @@ namespace RotationController
         private void changeRotation(float angle)
         {
             LogDisplay("Changing rotation from " + currentAngle + " to " + angle);
-            if(currentAngle > angle)
+            if (currentAngle > angle)
             {
                 setUpperLimit(angle);
                 setVelocity("open");
-            } else
+            }
+            else
             {
-                hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), angle);
+                hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), setAngle(angle));
                 setVelocity("closing");
             }
         }
 
-        // set the correct velocity (open = backup + / open != backup -
+        private float setAngle(float angle)
+        {
+            if (!backupHinge)
+            {
+                angle = -angle;
+            }
+            return angle;
+        }
+
+        private float getAngle()
+        {
+            float result = hf_RotorHinge.Angle;
+            if (!backupHinge)
+            {
+                result = -result;
+            }
+            return result;
+        }
+
+        // set the correct velocity (open = backup + / open != backup) needs to be implemented asap (or not?!)  
         private void setVelocity(string direction)
         {
 
         }
 
-        // Handles the relative upper limit (lower limit for !backup)
+        // Handles the relative upper limit (lower limit for !backup)  
         public void setUpperLimit(float angle)
         {
             if (angle > opened)
             {
                 LogDisplay("Error: UpperLimit is too high");
-            } else
+            }
+            else
             {
-                if (!backupHinge)
-                {
-                    hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), -angle);
-                }
-                else
-                {
-                    hf_RotorHinge.SetValueFloat(getLimitProprtyID("UpperLimit"), angle);
-                }
+                LogDisplay("Setting Upperlimit to " + angle);
+                hf_RotorHinge.SetValueFloat(getLimitProprtyID("UpperLimit"), setAngle(angle));
             }
 
-            
+
         }
 
-        // Handles the relative upper limit (upper limit for !backup)
+        // Handles the relative upper limit (upper limit for !backup)  
         public void setLowerLimit(float angle)
         {
             if (angle < closed)
@@ -183,31 +220,30 @@ namespace RotationController
             }
             else
             {
+                LogDisplay("Setting Lowerlimit to " + angle);
                 if (!backupHinge)
                 {
-                    hf_RotorHinge.SetValueFloat(getLimitProprtyID("UpperLimit"), -angle);
-                }
-                else
-                {
-                    hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), angle);
+                    hf_RotorHinge.SetValueFloat(getLimitProprtyID("LowerLimit"), setAngle(angle));
                 }
             }
 
         }
 
-        // this just totally breaks the whole system - rewrite reason might be the backup / !backup logic
+        // Works now, hooray! - must be fittet once the normal rotation system works
         public void openHellfire()
         {
             LogDisplay("Checking Current position");
             hingeStatus = getHingeStatus();
 
-            if (!hingeStatus.Equals("closing"))
+            if (!hingeStatus.Equals("opening") || hingeStatus.Equals("none"))
             {
+                LogDisplay("Opening in Progress");
+
                 setUpperLimit(opened);
 
                 setHingeVelocity("opening", hellfireVelocity);
 
-                LogDisplay("Opening in Progress");
+                hingeStatus = "opening";
             }
             else
             {
@@ -216,18 +252,20 @@ namespace RotationController
         }
 
 
-        // this just totally breaks the whole system - rewrite reason might be the backup / !backup logic
+        // Works now, hooray!
         public void closeHellfire()
         {
             hingeStatus = getHingeStatus();
 
-            if (!hingeStatus.Equals("closing"))
+            if (!hingeStatus.Equals("closing") || hingeStatus.Equals("none"))
             {
                 LogDisplay("Closing in Progress");
 
                 setLowerLimit(closed);
 
                 setHingeVelocity("closing", hellfireVelocity);
+
+                hingeStatus = "closing";
             }
             else
             {
@@ -235,22 +273,28 @@ namespace RotationController
             }
         }
 
-        // could probably be much easier
+        // could probably be much easier  
         private void setHingeVelocity(string option, float newVelocity)
         {
-            if(option.Equals("closing"))
+            if (option.Equals("closing"))
             {
                 if (backupHinge)
                 {
                     newVelocity = -hellfireVelocity;
                 }
-            } else if (option.Equals("opening"))
+            }
+            else if (option.Equals("opening"))
             {
                 if (!backupHinge)
                 {
                     newVelocity = -hellfireVelocity;
                 }
-            } else
+            }
+            else if (option.Equals("none"))
+            {
+                newVelocity = 0f;
+            }
+            else
             {
                 LogDisplay("Velocity: Command not regocnized '" + option + "' - Emergency stop");
                 newVelocity = 0f;
@@ -259,41 +303,74 @@ namespace RotationController
             hf_RotorHinge.SetValueFloat("Velocity", newVelocity);
         }
 
+        /// <summary>
+        /// Returns the correct velocity for the used rotor
+        /// </summary>
+        /// <returns></returns>
+        private float getVelocity()
+        {
+            float result = hf_RotorHinge.Velocity;
+            if (!backupHinge)
+            {
+                result = -result;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Safetyfuncion to check whether the calculated angle is in range
+        /// </summary>
+        /// <param name="angle"></param>
+        /// <returns></returns>
         private float checkAngle(float angle)
         {
             if (angle > opened)
             {
                 LogDisplay("Warning: angle is too large (" + angle + ")\n Setting angle to " + opened);
                 angle = opened;
-            } else if (angle < closed)
+            }
+            else if (angle < closed)
             {
                 LogDisplay("Warning: angle is too small (" + angle + ")\n Setting angle to " + closed);
                 angle = closed;
             }
-            
-            if (backupHinge)
-            {
-                angle = -angle;
-            }
 
-            return angle;
+            return (float)(Math.PI / 180) * angle;
         }
 
+        /// <summary>
+        /// Returns the correct property for lower/upper limit in relation to which rotor is used
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
         public string getLimitProprtyID(string limit)
         {
             string result = limit;
-            if (backupHinge)
+            if (!backupHinge)
             {
-                if(limit.Equals("UpperLimit"))
+                if (limit.Equals("UpperLimit"))
                 {
                     limit = "LowerLimit";
-                } else if (limit.Equals("LowerLimit"))
+                    LogDisplay("Backup: Setting " + limit);
+                }
+                else if (limit.Equals("LowerLimit"))
                 {
                     limit = "UpperLimit";
-                } 
+                    LogDisplay("Backup: Setting " + limit);
+                }
+                else
+                {
+                    LogDisplay("Error wrong identifier for Limit - " + limit);
+                }
             }
+            else
+            {
+                LogDisplay("Nonbackup: Setting " + limit);
+            }
+
+            LogDisplay("set " + limit);
             return limit;
-        
+
         }
 
         void getStatus()
@@ -313,15 +390,16 @@ namespace RotationController
         }
 
 
-        /// <summary>
-        /// Need to be adjusted to support +/- angle for the backup system
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>  
+        /// Need to be adjusted to support +/- angle for the backup system  
+        /// </summary>  
+        /// <returns></returns>  
         string getHingeStatus()
         {
             LogDisplay("Rotor status:");
             string result = "none";
-            if (hf_RotorHinge.Velocity > 0)
+            float velocity = getVelocity();
+            if (velocity > 0)
             {
                 if (hf_RotorHinge.Angle < opened)
                 {
@@ -332,7 +410,7 @@ namespace RotationController
                     result = "malfunction";
                 }
             }
-            else if (hf_RotorHinge.Velocity < 0)
+            else if (velocity < 0)
             {
                 if (hf_RotorHinge.Angle > closed)
                 {
@@ -348,7 +426,7 @@ namespace RotationController
                 result = "malfunction";
             }
 
-            LogDisplay(result + ": vel = " + hf_RotorHinge.Velocity + " rot: " + hf_RotorHinge.Angle);
+            LogDisplay(result + ": vel = " + velocity + " rot: " + hf_RotorHinge.Angle);
             return result;
         }
 
@@ -362,7 +440,9 @@ namespace RotationController
                 if (systems[i].IsFunctional && systems[i].IsWorking)
                 {
                     tempStatus = (green + " " + systems[i].CustomName + " is okay");
-                } else if (systems[i].IsWorking) {
+                }
+                else if (systems[i].IsWorking)
+                {
                     tempStatus = (yellow + " " + systems[i].CustomName + " is okay");
                 }
                 else
@@ -376,15 +456,17 @@ namespace RotationController
             return result;
         }
 
-        /// <summary>
-        /// Needs adjustment for backup rotor support
-        /// </summary>
+        /// <summary>  
+        /// Needs adjustment for backup rotor support  
+        /// </summary>  
         private void updateStatus()
         {
-            hf_DisplayStatus.WritePrivateText("Hellfire System Status (" + systemStatus + "):", false);
+            hf_DisplayStatus.WritePrivateText("Hellfire System Status (" + hingeStatus + "):", false);
             hf_DisplayStatus.WritePrivateText("Active Rotor: " + hf_RotorHinge.CustomName);
             statusReport = String.Format("Functional: {0}\n Rotation: {1}\n Velocity: {2}\n Lower Limit: {3}\n Upper Limit: {4} ", hf_RotorHinge.IsFunctional, hf_RotorHinge.Angle, hf_RotorHinge.Velocity, hf_RotorHinge.LowerLimit, hf_RotorHinge.UpperLimit);
             hf_DisplayStatus.WritePrivateText(statusReport);
+            currentVelocity = getVelocity();
+            currentAngle = getAngle();
         }
 
         void LogDisplay(string status)
@@ -392,29 +474,40 @@ namespace RotationController
             LogDisplay(status, true);
         }
 
-        //create handling of multiple lines
         void LogDisplay(string status, bool append)
         {
+
             if (append)
             {
-                logfile.Add(status);
-            } else
+                string[] lines = status.Split('\n');
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    logfile.Add(lines[i] + "\n");
+                    if (logfile.Count > 16)
+                    {
+                        currentTopLine++;
+                    }
+                    updateLog();
+                }
+            }
+            else
             {
                 logfile.Clear();
                 logfile.Add(status + "\n");
             }
-            hf_DisplayLog.WritePrivateText(status + "\n", append);
-            updateLog();
+            //hf_DisplayLog.WritePrivateText(status + "\n", append);  
+
         }
 
-        // create a handling of the display so that the most current infos are shown and the display autoscrolls
         void updateLog()
         {
-            for (int i = logfile.Count - 16; i < logfile.Count; i++)
+            hf_DisplayLog.WritePrivateText(programName + " Log:\n", false);
+            for (int i = currentTopLine; i < currentTopLine + 16 && i < logfile.Count; i++)
             {
-                hf_DisplayLog.WritePrivateText(logfile[i] + "\n", true);
+                hf_DisplayLog.WritePrivateText(logfile[i], true);
             }
         }
+
 
         /// <summary>
         /// Stop Copy here
