@@ -1,3 +1,18 @@
 ﻿Notes for SPACE ENGINEERS
 GPS FORMAT = TAG:NAME:X:Y:Z:
 GPS:Between Bases:-1197.31:-764.46:-144.85:
+
+
+Names Hellfire / Inferno system:
+
+Controller - Input side of the system, all playerinput and system to system communication is relayed through here
+Observer - Updates the mainscreen and keeps track of the states of the system
+Firesystem - Handles all the rocketpots and when they will fire
+Target system - Keeps track of the targets and puts them out to the menu
+
+
+Shipname: Hellfire, Inferno, Dante
+Main Controller: Dante/Vergil
+Observer: Vergil/Beatrice
+Target System: Minos/Charon
+Firesystem: Lucifer/Minos
